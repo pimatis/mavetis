@@ -72,6 +72,7 @@ func Review(diff model.Diff, config model.Config, rules []model.Rule) (model.Rep
 	appendFindings(&findings, seen, nonceFindings(diff), config)
 	appendFindings(&findings, seen, manifestFindings(diff), config)
 	appendFindings(&findings, seen, signatureFindings(diff), config)
+	appendFindings(&findings, seen, downgradeFindings(diff), config)
 	appendFindings(&findings, seen, crossFindings(diff), config)
 	sortFindings(findings)
 	report.Findings = findings

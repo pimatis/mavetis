@@ -6,6 +6,7 @@ func Builtins(config model.Config) []model.Rule {
 	rules := make([]model.Rule, 0)
 	rules = append(rules, secrets(config)...)
 	rules = append(rules, authn()...)
+	rules = append(rules, regress()...)
 	rules = append(rules, session()...)
 	rules = append(rules, authorize()...)
 	rules = append(rules, oauth()...)
@@ -14,6 +15,8 @@ func Builtins(config model.Config) []model.Rule {
 	rules = append(rules, inject()...)
 	rules = append(rules, template()...)
 	rules = append(rules, supply()...)
+	rules = append(rules, drift()...)
+	rules = append(rules, observe()...)
 	return enrichControls(rules)
 }
 

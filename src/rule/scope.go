@@ -48,6 +48,24 @@ var workflowSet = []string{
 	"**/*.yml",
 }
 
+var deploymentSet = []string{
+	"Dockerfile",
+	"**/Dockerfile",
+	"**/docker-compose.yml",
+	"**/docker-compose.yaml",
+	"**/compose.yml",
+	"**/compose.yaml",
+	"**/*.conf",
+	"**/*.cfg",
+	"**/*.cnf",
+	"**/*.properties",
+	"**/nginx.conf",
+	"**/Caddyfile",
+	"**/*.env",
+	"**/.env",
+	"**/.env.*",
+}
+
 var manifestSet = []string{
 	"**/package.json",
 	"**/package-lock.json",
@@ -80,6 +98,10 @@ func configFiles() []string {
 
 func workflowFiles() []string {
 	return clone(workflowSet)
+}
+
+func deploymentFiles() []string {
+	return clone(deploymentSet)
 }
 
 func manifestFiles() []string {
