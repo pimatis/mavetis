@@ -3,6 +3,7 @@ package cli
 import (
 	"testing"
 
+	"github.com/Pimatis/mavetis/src/model"
 	updater "github.com/Pimatis/mavetis/src/update"
 )
 
@@ -42,5 +43,12 @@ func TestExecuteDispatchesUpdate(t *testing.T) {
 	}
 	if !called {
 		t.Fatal("expected update dispatch")
+	}
+}
+
+func TestBlockedUsesEffectiveFailOnWhenZonePolicyApplies(t *testing.T) {
+	report := model.Report{Findings: []model.Finding{{Severity: "low", EffectiveFailOn: "low"}}}
+	if !blocked(report, "critical") {
+		t.Fatal("expected zone policy to block")
 	}
 }

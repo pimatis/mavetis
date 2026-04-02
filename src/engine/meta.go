@@ -4,7 +4,7 @@ import "github.com/Pimatis/mavetis/src/model"
 
 func MatrixInfos(rules []model.Rule) []model.RuleInfo {
 	items := infos(rules)
-	items = append(items, syntheticInfos()...)
+	items = append(items, syntheticInfosForProfile("")...)
 	return items
 }
 
@@ -49,8 +49,15 @@ func syntheticInfos() []model.RuleInfo {
 	}
 }
 
-func appendFindings(target *[]model.Finding, seen map[string]struct{}, additions []model.Finding, config model.Config) {
+func appendFindings(target *[]model.Finding, seen map[string]struct{}, additions []model.Finding, config model.Config, zoneCache map[string]zoneMatch) {
 	for _, finding := range additions {
+		if !allowSynthetic(config.Profile, finding) {
+			continue
+		}
+		if finding.Path != "" && finding.Path != "<branch>" {
+			zone := resolveZone(finding.Path, config, zoneCache)
+			finding = applyPolicy(finding, zone, config.FailOn)
+		}
 		if model.SeverityRank(finding.Severity) < model.SeverityRank(config.Severity) {
 			continue
 		}

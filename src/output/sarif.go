@@ -42,10 +42,11 @@ type sarifProperties struct {
 }
 
 type sarifResult struct {
-	RuleID    string          `json:"ruleId"`
-	Level     string          `json:"level"`
-	Message   sarifMessage    `json:"message"`
-	Locations []sarifLocation `json:"locations"`
+	RuleID     string               `json:"ruleId"`
+	Level      string               `json:"level"`
+	Message    sarifMessage         `json:"message"`
+	Locations  []sarifLocation      `json:"locations"`
+	Properties *sarifResultProperty `json:"properties,omitempty"`
 }
 
 type sarifMessage struct {
@@ -69,6 +70,13 @@ type sarifRegion struct {
 	StartLine int `json:"startLine"`
 }
 
+type sarifResultProperty struct {
+	Zone            string `json:"zone,omitempty"`
+	BaseSeverity    string `json:"baseSeverity,omitempty"`
+	EffectiveFailOn string `json:"effectiveFailOn,omitempty"`
+	Profile         string `json:"profile,omitempty"`
+}
+
 func SARIF(report model.Report) (string, error) {
 	rules := make([]sarifRule, 0, len(report.Rules))
 	for _, rule := range report.Rules {
@@ -81,10 +89,19 @@ func SARIF(report model.Report) (string, error) {
 	}
 	results := make([]sarifResult, 0, len(report.Findings))
 	for _, finding := range report.Findings {
+		profile := ""
+		if report.Policy != nil {
+			profile = report.Policy.Profile
+		}
+		properties := &sarifResultProperty{Zone: finding.Zone, BaseSeverity: finding.BaseSeverity, EffectiveFailOn: finding.EffectiveFailOn, Profile: profile}
+		if properties.Zone == "" && properties.BaseSeverity == "" && properties.EffectiveFailOn == "" && properties.Profile == "" {
+			properties = nil
+		}
 		results = append(results, sarifResult{
-			RuleID:  finding.RuleID,
-			Level:   level(finding.Severity),
-			Message: sarifMessage{Text: finding.Message},
+			RuleID:     finding.RuleID,
+			Level:      level(finding.Severity),
+			Message:    sarifMessage{Text: finding.Message},
+			Properties: properties,
 			Locations: []sarifLocation{{
 				PhysicalLocation: sarifPhysical{
 					ArtifactLocation: sarifArtifact{URI: finding.Path},

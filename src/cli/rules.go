@@ -72,14 +72,18 @@ func showRule(arguments []string) int {
 	flags := flag.NewFlagSet("rules show", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 	path := flags.String("rules", "", "Path to custom rules file")
+	profile := flags.String("profile", "", "Rule profile: auth, fintech, backend, frontend")
 	id := flags.String("id", "", "Rule identifier")
 	if err := flags.Parse(arguments); err != nil {
 		return 2
 	}
+	if err := config.ValidateProfile(*profile); err != nil {
+		return fail(err)
+	}
 	if *id == "" {
 		return fail(errors.New("rules show requires --id"))
 	}
-	rules, err := allRules(*path)
+	rules, err := allRules(*path, *profile)
 	if err != nil {
 		return fail(err)
 	}
@@ -108,10 +112,14 @@ func testRules(arguments []string) int {
 	flags := flag.NewFlagSet("rules test", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 	rulesPath := flags.String("rules", "", "Path to custom rules file")
+	profile := flags.String("profile", "", "Rule profile: auth, fintech, backend, frontend")
 	diffPath := flags.String("diff", "", "Path to unified diff file")
 	format := flags.String("format", "text", "Output format")
 	if err := flags.Parse(arguments); err != nil {
 		return 2
+	}
+	if err := config.ValidateProfile(*profile); err != nil {
+		return fail(err)
 	}
 	if *diffPath == "" {
 		return fail(errors.New("rules test requires --diff"))
@@ -124,11 +132,11 @@ func testRules(arguments []string) int {
 	if err != nil {
 		return fail(err)
 	}
-	rules, err := allRules(*rulesPath)
+	rules, err := allRules(*rulesPath, *profile)
 	if err != nil {
 		return fail(err)
 	}
-	report, err := engine.Review(parsed, model.Config{Severity: "low", Output: *format}, rules)
+	report, err := engine.Review(parsed, model.Config{Severity: "low", Output: *format, Profile: *profile}, rules)
 	if err != nil {
 		return fail(err)
 	}
@@ -168,12 +176,16 @@ func loadRules(arguments []string) ([]model.Rule, error) {
 	flags := flag.NewFlagSet("rules list", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 	path := flags.String("rules", "", "Path to custom rules file")
+	profile := flags.String("profile", "", "Rule profile: auth, fintech, backend, frontend")
 	if err := flags.Parse(arguments); err != nil {
 		return nil, err
 	}
-	return allRules(*path)
+	if err := config.ValidateProfile(*profile); err != nil {
+		return nil, err
+	}
+	return allRules(*path, *profile)
 }
 
-func allRules(path string) ([]model.Rule, error) {
-	return loadAllRules(model.Config{}, path)
+func allRules(path string, profile string) ([]model.Rule, error) {
+	return loadAllRules(model.Config{Profile: profile}, path)
 }

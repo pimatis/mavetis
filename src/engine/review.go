@@ -27,6 +27,7 @@ type allowance struct {
 
 func Review(diff model.Diff, config model.Config, rules []model.Rule) (model.Report, error) {
 	report := model.Report{Meta: diff.Meta}
+	report.Policy = policyReport(config)
 	report.Summary.Files = len(diff.Files)
 	report.Rules = infos(rules)
 	compiledRules, err := compile(rules)
@@ -39,6 +40,7 @@ func Review(diff model.Diff, config model.Config, rules []model.Rule) (model.Rep
 		return report, err
 	}
 	seen := map[string]struct{}{}
+	zoneCache := map[string]zoneMatch{}
 	findings := make([]model.Finding, 0)
 	for _, file := range diff.Files {
 		if match.Any(config.Ignore, file.Path) {
@@ -47,6 +49,7 @@ func Review(diff model.Diff, config model.Config, rules []model.Rule) (model.Rep
 		if match.Any(config.Allow.Paths, file.Path) {
 			continue
 		}
+		zone := resolveZone(file.Path, config, zoneCache)
 		for _, hunk := range file.Hunks {
 			hunkText := join(hunk)
 			for _, line := range hunk.Lines {
@@ -55,6 +58,7 @@ func Review(diff model.Diff, config model.Config, rules []model.Rule) (model.Rep
 					if !ok {
 						continue
 					}
+					finding = applyPolicy(finding, zone, config.FailOn)
 					if model.SeverityRank(finding.Severity) < model.SeverityRank(config.Severity) {
 						continue
 					}
@@ -67,16 +71,16 @@ func Review(diff model.Diff, config model.Config, rules []model.Rule) (model.Rep
 			}
 		}
 	}
-	appendFindings(&findings, seen, semanticFindings(diff), config)
-	appendFindings(&findings, seen, goSemanticFindings(diff), config)
-	appendFindings(&findings, seen, nonceFindings(diff), config)
-	appendFindings(&findings, seen, manifestFindings(diff), config)
-	appendFindings(&findings, seen, signatureFindings(diff), config)
-	appendFindings(&findings, seen, downgradeFindings(diff), config)
-	appendFindings(&findings, seen, crossFindings(diff), config)
+	appendFindings(&findings, seen, semanticFindings(diff), config, zoneCache)
+	appendFindings(&findings, seen, goSemanticFindings(diff), config, zoneCache)
+	appendFindings(&findings, seen, nonceFindings(diff), config, zoneCache)
+	appendFindings(&findings, seen, manifestFindings(diff), config, zoneCache)
+	appendFindings(&findings, seen, signatureFindings(diff), config, zoneCache)
+	appendFindings(&findings, seen, downgradeFindings(diff), config, zoneCache)
+	appendFindings(&findings, seen, crossFindings(diff), config, zoneCache)
 	sortFindings(findings)
 	report.Findings = findings
-	report.Rules = append(report.Rules, syntheticInfos()...)
+	report.Rules = append(report.Rules, syntheticInfosForProfile(config.Profile)...)
 	for _, finding := range findings {
 		report.Summary.Add(finding)
 	}

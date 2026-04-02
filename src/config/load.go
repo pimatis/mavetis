@@ -64,6 +64,10 @@ func decodeConfig(mapped map[string]any, config *model.Config) {
 	if ok {
 		config.Output = output
 	}
+	profile, ok := yaml.String(mapped["profile"])
+	if ok {
+		config.Profile = profile
+	}
 	config.Ignore = yaml.Strings(mapped["ignore"])
 	allow, ok := mapped["allow"]
 	if ok {
@@ -79,6 +83,14 @@ func decodeConfig(mapped map[string]any, config *model.Config) {
 		companyMap, err := yaml.Map(company)
 		if err == nil {
 			config.Company.Prefixes = yaml.Strings(companyMap["prefixes"])
+		}
+	}
+	zones, ok := mapped["zones"]
+	if ok {
+		zonesMap, err := yaml.Map(zones)
+		if err == nil {
+			config.Zones.Critical = yaml.Strings(zonesMap["critical"])
+			config.Zones.Restricted = yaml.Strings(zonesMap["restricted"])
 		}
 	}
 }

@@ -121,6 +121,9 @@ func merge(config *model.Config, spec model.Review) {
 	if spec.Format != "" {
 		config.Output = spec.Format
 	}
+	if spec.Profile != "" {
+		config.Profile = spec.Profile
+	}
 }
 
 func render(report model.Report, format string, explain bool) error {
@@ -146,7 +149,11 @@ func render(report model.Report, format string, explain bool) error {
 
 func blocked(report model.Report, threshold string) bool {
 	for _, finding := range report.Findings {
-		if model.SeverityRank(finding.Severity) >= model.SeverityRank(threshold) {
+		effectiveThreshold := threshold
+		if finding.EffectiveFailOn != "" {
+			effectiveThreshold = finding.EffectiveFailOn
+		}
+		if model.SeverityRank(finding.Severity) >= model.SeverityRank(effectiveThreshold) {
 			return true
 		}
 	}

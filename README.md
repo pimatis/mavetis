@@ -10,9 +10,32 @@ Mavetis delivers security analysis capabilities through the following core featu
 - **Change-Focused Analysis**: Precise security evaluation of staged changes, branch diffs, and merge candidates
 - **Comprehensive Detection**: Coverage across secrets management, authentication, authorization, cryptography, injection vulnerabilities, and supply chain security
 - **Regression Prevention**: Detection of removed security controls, validation mechanisms, and policy enforcement points
+- **Policy-Aware Review**: Built-in review profiles and trust zones for risk-weighted enterprise diff analysis
 - **Flexible Rule Engine**: Customizable YAML-based rules with contextual scoping and intelligent suppression
 - **Enterprise Integration**: Native JSON and SARIF output formats for seamless CI/CD pipeline integration
 - **Deterministic Execution**: Pure Go standard library implementation ensuring consistent, reproducible results
+
+## Delivered Capability Layers
+
+### Regression Core
+
+Mavetis treats security weakening as a first-class signal in Git diffs, not only newly introduced dangerous code.
+
+Delivered capabilities include:
+
+- **Security Downgrade Detection**: SameSite weakening, cookie and token lifetime growth, bcrypt cost reduction, rate-limit threshold increases, timeout expansion, and MFA weakening
+- **Config Drift Detection**: Debug mode activation, non-production environment fallbacks, wildcard CORS, weakened CSP, legacy TLS configuration, and privileged container settings
+- **Observability Leak Detection**: Request body logging, authorization material leakage, PII in telemetry, raw error serialization, and sensitive tracing attributes
+
+### Policy Layer
+
+Mavetis can now operate as a policy-aware diff review layer instead of a single global rule set.
+
+Delivered capabilities include:
+
+- **Rule Profiles**: `auth`, `fintech`, `backend`, and `frontend` review modes for different engineering surfaces
+- **Trust Zones**: `zones.critical` and `zones.restricted` path groups that automatically raise severity and tighten blocking thresholds
+- **Policy Metadata in Output**: Text, JSON, and SARIF outputs now include active policy context for downstream review and CI enforcement
 
 ## Security Architecture
 
@@ -76,14 +99,14 @@ Remove the binary from the location that was used during installation.
 ### Basic Operations
 
 ```bash
-# Review staged changes with detailed explanations
-mavetis review --staged --path 'src/**' --explain
+# Review staged authentication changes with profile-aware explanations
+mavetis review --staged --path 'src/**' --profile auth --explain
 
-# Compare against base branch
-mavetis review --base main --path 'src/**'
+# Compare backend changes against a base branch
+mavetis review --base main --path 'src/**' --profile backend
 
-# CI/CD integration with JSON output
-mavetis ci --base main --format json
+# CI/CD integration with fintech-focused policy output
+mavetis ci --base main --format json --profile fintech
 
 # Install Git hooks for automated scanning
 mavetis hooks install
@@ -93,8 +116,8 @@ mavetis hooks install
 
 ### Analysis Commands
 
-- `mavetis review` — Analyze code changes with configurable scope and output
-- `mavetis ci` — Optimized analysis for continuous integration environments
+- `mavetis review` — Analyze code changes with configurable scope, output, and rule profile selection
+- `mavetis ci` — Optimized analysis for continuous integration environments with profile-aware policy evaluation
 
 ### Git Hook Management
 
@@ -183,7 +206,7 @@ Analysis of dependency and build pipeline security:
 
 ## Regression Detection
 
-Mavetis implements comprehensive regression detection by analyzing removed security controls with the same priority as newly introduced vulnerabilities. The system identifies:
+Mavetis implements comprehensive regression detection by analyzing removed or weakened security controls with the same priority as newly introduced vulnerabilities. The system identifies:
 
 - Deleted authentication and authorization middleware
 - Removed role-based access control checks
@@ -193,6 +216,9 @@ Mavetis implements comprehensive regression detection by analyzing removed secur
 - Disabled token single-use validations
 - Deleted file upload validation
 - Removed scope and permission filters
+- SameSite policy weakening and cookie lifetime expansion
+- bcrypt cost downgrades and MFA requirement weakening
+- Config drift that disables production-grade browser, transport, or deployment protections
 
 ## Output Formats
 
@@ -224,6 +250,7 @@ Mavetis loads configuration from `.mavetis.yaml` or `.mavetis.yml` in the curren
 severity: low
 fail-on: high
 output: text
+profile: fintech
 ignore:
   - vendor/**
 allow:
@@ -236,7 +263,37 @@ allow:
 company:
   prefixes:
     - corp_
+zones:
+  critical:
+    - src/auth/**
+    - src/lib/security/**
+    - src/api/admin/**
+  restricted:
+    - src/payments/**
+    - src/backoffice/**
 ```
+
+### Profiles and Trust Zones
+
+Profiles change which built-in rule families are active during review:
+
+- `auth` — authentication, authorization, session, token, crypto, and related auth telemetry coverage
+- `fintech` — full default policy surface for high-assurance review workflows
+- `backend` — server-side security, supply-chain, config, network, and abuse-prevention coverage
+- `frontend` — browser-facing auth, session, XSS, CORS, privacy, telemetry, and client config coverage
+
+Trust zones raise enforcement in sensitive directories:
+
+- `zones.critical` — raises matched findings by two severity levels up to `critical` and tightens blocking to `fail-on=low`
+- `zones.restricted` — raises matched findings by one severity level and tightens blocking to `fail-on=medium`
+
+Example:
+
+```bash
+mavetis review --staged --profile auth --config .mavetis.yaml
+```
+
+Output formats include the active policy, matched zone, base severity, and effective fail threshold so CI systems can distinguish policy escalation from the original detector severity.
 
 ### Custom Security Rules
 

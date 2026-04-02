@@ -1,20 +1,23 @@
 package model
 
 type Finding struct {
-	ID          string   `json:"id"`
-	RuleID      string   `json:"ruleId"`
-	Title       string   `json:"title"`
-	Category    string   `json:"category"`
-	Severity    string   `json:"severity"`
-	Confidence  string   `json:"confidence"`
-	Path        string   `json:"path"`
-	Line        int      `json:"line"`
-	Side        string   `json:"side"`
-	Message     string   `json:"message"`
-	Snippet     string   `json:"snippet"`
-	Remediation string   `json:"remediation"`
-	Reasons     []string `json:"reasons,omitempty"`
-	Standards   []string `json:"standards"`
+	ID              string   `json:"id"`
+	RuleID          string   `json:"ruleId"`
+	Title           string   `json:"title"`
+	Category        string   `json:"category"`
+	Severity        string   `json:"severity"`
+	BaseSeverity    string   `json:"baseSeverity,omitempty"`
+	Confidence      string   `json:"confidence"`
+	Path            string   `json:"path"`
+	Line            int      `json:"line"`
+	Side            string   `json:"side"`
+	Zone            string   `json:"zone,omitempty"`
+	EffectiveFailOn string   `json:"effectiveFailOn,omitempty"`
+	Message         string   `json:"message"`
+	Snippet         string   `json:"snippet"`
+	Remediation     string   `json:"remediation"`
+	Reasons         []string `json:"reasons,omitempty"`
+	Standards       []string `json:"standards"`
 }
 
 type Summary struct {

@@ -26,5 +26,8 @@ func validateReview(spec model.Review) error {
 	if err := config.ValidateSeverity(spec.FailOn, "fail-on"); err != nil {
 		return err
 	}
+	if err := config.ValidateProfile(spec.Profile); err != nil {
+		return err
+	}
 	return nil
 }

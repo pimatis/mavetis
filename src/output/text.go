@@ -22,6 +22,17 @@ func TextExplain(report model.Report, explain bool) string {
 		builder.WriteString(line("Head", report.Meta.Head, tone))
 	}
 	builder.WriteString(line("Files", fmt.Sprintf("%d", report.Summary.Files), tone))
+	if report.Policy != nil {
+		if report.Policy.Profile != "" {
+			builder.WriteString(line("Profile", report.Policy.Profile, tone))
+		}
+		if report.Policy.FailOn != "" {
+			builder.WriteString(line("FailOn", report.Policy.FailOn, tone))
+		}
+		for _, zone := range report.Policy.Zones {
+			builder.WriteString(line("Zone", fmt.Sprintf("%s severity+%d fail-on=%s", zone.Name, zone.SeverityOffset, zone.FailOn), tone))
+		}
+	}
 	builder.WriteString(summary(report.Summary, tone))
 	for _, finding := range report.Findings {
 		builder.WriteString("\n")
@@ -30,6 +41,15 @@ func TextExplain(report model.Report, explain bool) string {
 		builder.WriteString(line("File", fmt.Sprintf("%s:%d", finding.Path, finding.Line), tone))
 		builder.WriteString(line("Side", finding.Side, tone))
 		builder.WriteString(line("Confidence", finding.Confidence, tone))
+		if finding.Zone != "" {
+			builder.WriteString(line("Zone", finding.Zone, tone))
+		}
+		if finding.BaseSeverity != "" {
+			builder.WriteString(line("BaseSeverity", finding.BaseSeverity, tone))
+		}
+		if finding.EffectiveFailOn != "" {
+			builder.WriteString(line("EffectiveFailOn", finding.EffectiveFailOn, tone))
+		}
 		builder.WriteString(line("Message", finding.Message, tone))
 		builder.WriteString(line("Snippet", strings.TrimSpace(finding.Snippet), tone))
 		builder.WriteString(line("Fix", finding.Remediation, tone))

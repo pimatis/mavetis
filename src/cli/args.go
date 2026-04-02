@@ -18,6 +18,7 @@ func parseReview(arguments []string, ci bool) (model.Review, error) {
 	flags.StringVar(&spec.Format, "format", "", "Output format: text, json, sarif")
 	flags.StringVar(&spec.Severity, "severity", "", "Minimum severity: low, medium, high, critical")
 	flags.StringVar(&spec.FailOn, "fail-on", "", "Fail threshold: low, medium, high, critical")
+	flags.StringVar(&spec.Profile, "profile", "", "Rule profile: auth, fintech, backend, frontend")
 	flags.StringVar(&spec.ConfigPath, "config", "", "Config path")
 	flags.StringVar(&spec.RulesPath, "rules", "", "Custom rules path")
 	flags.StringVar(&spec.Path, "path", "", "Limit review to a path glob")
@@ -64,11 +65,11 @@ func defaultBase(value string) string {
 	return "main"
 }
 
-func usage() {
-	message := `mavetis commands:
-  review --staged [--path src/**] [--explain]
-  review --base main [--path src/**]
-  ci --base main [--path src/**]
+func helpMessage() string {
+	return `mavetis commands:
+  review --staged [--path src/**] [--profile auth] [--explain]
+  review --base main [--path src/**] [--profile backend]
+  ci --base main [--path src/**] [--profile fintech]
   hooks install
   hooks uninstall
   rules validate --rules rules.yaml
@@ -79,10 +80,20 @@ func usage() {
   update [--check]
   version
 
+regression core:
+  - security downgrade detection for cookies, bcrypt, timeouts, rate limits, and MFA
+  - config drift detection for debug mode, CSP, CORS, TLS, and deployable container settings
+  - observability leak detection for request bodies, auth material, PII, raw errors, and traces
+
+policy layer:
+  - rule profiles: auth, fintech, backend, frontend
+  - trust zones from config: zones.critical and zones.restricted
+  - automatic severity uplift and stricter fail-on inside protected paths
+
 examples:
-  mavetis review --staged --path 'src/**' --explain
-  mavetis review --base main --path 'src/**'
-  mavetis ci --base main --format json
+  mavetis review --staged --path 'src/**' --profile auth --explain
+  mavetis review --base main --path 'src/**' --profile backend
+  mavetis ci --base main --format json --profile fintech
   mavetis rules validate --rules rules.yaml
   mavetis update --check
   mavetis hooks install
@@ -91,5 +102,8 @@ exit codes:
   0 no blocking findings or help output
   1 blocking findings matched --fail-on
   2 usage or runtime error`
-	println(message)
+}
+
+func usage() {
+	println(helpMessage())
 }

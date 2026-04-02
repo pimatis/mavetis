@@ -11,6 +11,7 @@ func TestLoad(t *testing.T) {
 	path := filepath.Join(dir, ".mavetis.yaml")
 	content := `severity: medium
 failon: critical
+profile: auth
 ignore:
   - vendor/**
 allow:
@@ -19,6 +20,11 @@ allow:
 company:
   prefixes:
     - corp_
+zones:
+  critical:
+    - src/auth/**
+  restricted:
+    - src/api/admin/**
 `
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
@@ -33,6 +39,15 @@ company:
 	if len(config.Company.Prefixes) != 1 || config.Company.Prefixes[0] != "corp_" {
 		t.Fatalf("unexpected company prefixes: %#v", config.Company.Prefixes)
 	}
+	if config.Profile != "auth" {
+		t.Fatalf("unexpected profile: %#v", config.Profile)
+	}
+	if len(config.Zones.Critical) != 1 || config.Zones.Critical[0] != "src/auth/**" {
+		t.Fatalf("unexpected critical zones: %#v", config.Zones.Critical)
+	}
+	if len(config.Zones.Restricted) != 1 || config.Zones.Restricted[0] != "src/api/admin/**" {
+		t.Fatalf("unexpected restricted zones: %#v", config.Zones.Restricted)
+	}
 }
 
 func TestLoadRejectsInvalidValues(t *testing.T) {
@@ -40,6 +55,7 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 	path := filepath.Join(dir, ".mavetis.yaml")
 	content := `severity: urgent
 output: xml
+profile: invalid
 `
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
@@ -47,6 +63,25 @@ output: xml
 	_, err := Load(path)
 	if err == nil {
 		t.Fatal("expected invalid config error")
+	}
+}
+
+func TestLoadRejectsInvalidZones(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".mavetis.yaml")
+	content := `zones:
+  critical:
+    - src/auth/**
+    - src/auth/**
+  restricted:
+    - ''
+`
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected invalid zone config error")
 	}
 }
 

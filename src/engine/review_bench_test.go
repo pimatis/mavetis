@@ -25,3 +25,21 @@ func BenchmarkReview(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkReviewPolicyProfile(b *testing.B) {
+	files := make([]model.DiffFile, 0, 200)
+	for index := 0; index < 100; index++ {
+		files = append(files, model.DiffFile{Path: "src/auth/file" + strconv.Itoa(index) + ".go", Hunks: []model.DiffHunk{{Lines: []model.DiffLine{{Kind: "added", Text: `token.ParseWithClaims(rawToken)`, NewNumber: 1}}}}})
+		files = append(files, model.DiffFile{Path: "src/ui/file" + strconv.Itoa(index) + ".tsx", Hunks: []model.DiffHunk{{Lines: []model.DiffLine{{Kind: "added", Text: `element.innerHTML = body`, NewNumber: 1}}}}})
+	}
+	diff := model.Diff{Files: files}
+	config := model.Config{Severity: "low", FailOn: "critical", Profile: "auth", Zones: model.Zones{Critical: []string{"src/auth/**"}, Restricted: []string{"src/ui/**"}}}
+	ruleset := FilterRulesForProfile(rule.Builtins(config), config.Profile)
+	b.ResetTimer()
+	for index := 0; index < b.N; index++ {
+		_, err := Review(diff, config, ruleset)
+		if err != nil {
+			b.Fatalf("review failed: %v", err)
+		}
+	}
+}

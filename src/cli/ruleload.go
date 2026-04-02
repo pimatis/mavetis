@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Pimatis/mavetis/src/config"
+	"github.com/Pimatis/mavetis/src/engine"
 	"github.com/Pimatis/mavetis/src/model"
 	"github.com/Pimatis/mavetis/src/rule"
 )
@@ -15,6 +16,7 @@ func loadAllRules(data model.Config, path string) ([]model.Rule, error) {
 		return nil, err
 	}
 	rules = append(rules, custom...)
+	rules = engine.FilterRulesForProfile(rules, data.Profile)
 	if err := validateRuleIDs(rules); err != nil {
 		return nil, err
 	}

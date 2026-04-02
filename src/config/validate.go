@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/Pimatis/mavetis/src/model"
 )
@@ -51,6 +52,56 @@ func validateConfig(data model.Config) error {
 	}
 	if err := ValidateOutput(data.Output); err != nil {
 		return err
+	}
+	if err := ValidateProfile(data.Profile); err != nil {
+		return err
+	}
+	if err := validateZones(data.Zones); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ValidateProfile(value string) error {
+	if value == "" {
+		return nil
+	}
+	if value == "auth" {
+		return nil
+	}
+	if value == "fintech" {
+		return nil
+	}
+	if value == "backend" {
+		return nil
+	}
+	if value == "frontend" {
+		return nil
+	}
+	return fmt.Errorf("invalid profile: %s", value)
+}
+
+func validateZones(zones model.Zones) error {
+	if err := validateZonePaths(zones.Critical, "zones.critical"); err != nil {
+		return err
+	}
+	if err := validateZonePaths(zones.Restricted, "zones.restricted"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateZonePaths(paths []string, field string) error {
+	seen := map[string]struct{}{}
+	for _, item := range paths {
+		value := strings.TrimSpace(item)
+		if value == "" {
+			return fmt.Errorf("invalid %s: empty path", field)
+		}
+		if _, ok := seen[value]; ok {
+			return fmt.Errorf("invalid %s: duplicate path %s", field, value)
+		}
+		seen[value] = struct{}{}
 	}
 	return nil
 }

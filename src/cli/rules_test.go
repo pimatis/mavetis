@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Pimatis/mavetis/src/model"
 )
 
 func TestRunRulesTest(t *testing.T) {
@@ -65,5 +67,54 @@ func TestRunRulesMatrix(t *testing.T) {
 	code := runRules([]string{"matrix"})
 	if code != 0 {
 		t.Fatalf("expected matrix success, got %d", code)
+	}
+}
+
+func TestAllRulesFiltersByProfile(t *testing.T) {
+	rules, err := allRules("", "auth")
+	if err != nil {
+		t.Fatalf("load rules: %v", err)
+	}
+	if len(rules) == 0 {
+		t.Fatal("expected profiled rules")
+	}
+	for _, item := range rules {
+		if item.Category == "xss" {
+			t.Fatalf("unexpected frontend-only rule in auth profile: %#v", item)
+		}
+	}
+	hasAuth := false
+	for _, item := range rules {
+		if item.ID == "token.claims.unchecked" {
+			hasAuth = true
+		}
+	}
+	if !hasAuth {
+		t.Fatalf("expected auth profile to retain auth rules: %#v", rules)
+	}
+}
+
+func TestRunRulesTestSupportsProfile(t *testing.T) {
+	dir := t.TempDir()
+	diffPath := filepath.Join(dir, "sample.diff")
+	diffContent := `diff --git a/app.ts b/app.ts
+--- a/app.ts
++++ b/app.ts
+@@ -0,0 +1 @@
++element.innerHTML = body
+`
+	if err := os.WriteFile(diffPath, []byte(diffContent), 0o600); err != nil {
+		t.Fatalf("write diff: %v", err)
+	}
+	code := runRules([]string{"test", "--diff", diffPath, "--format", "json", "--profile", "frontend"})
+	if code != 0 {
+		t.Fatalf("expected success, got %d", code)
+	}
+}
+
+func TestBlockedUsesDefaultThresholdWithoutZoneOverride(t *testing.T) {
+	report := model.Report{Findings: []model.Finding{{Severity: "medium"}}}
+	if !blocked(report, "medium") {
+		t.Fatal("expected default threshold to block")
 	}
 }
