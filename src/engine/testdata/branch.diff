@@ -1,0 +1,13 @@
+diff --git a/auth/middleware.go b/auth/middleware.go
+--- a/auth/middleware.go
++++ b/auth/middleware.go
+@@ -1,3 +1,2 @@
+ func protect() {
+-  requireAuth()
+ }
+diff --git a/routes/admin.go b/routes/admin.go
+--- a/routes/admin.go
++++ b/routes/admin.go
+@@ -1,2 +1,3 @@
+ package routes
++router.Get("/admin", handler)

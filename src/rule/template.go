@@ -1,0 +1,65 @@
+package rule
+
+import "github.com/Pimatis/mavetis/src/model"
+
+func template() []model.Rule {
+	return []model.Rule{
+		{
+			ID:          "template.ssti.dynamic",
+			Title:       "Dynamic template execution introduced",
+			Message:     "The diff renders or parses a template using request-controlled or dynamic content.",
+			Remediation: "Keep template source static and pass only data values into the rendering context.",
+			Category:    "template",
+			Severity:    "high",
+			Confidence:  "medium",
+			Target:      "added",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(template\.New|Parse\(|render_template_string|jinja2|Handlebars\.compile|ejs\.render|Mustache\.render)`},
+			Near:        []string{`(?i)(query|params|body|input|request|ctx|user)`},
+			Absent:      []string{`(?i)(trustedTemplate|staticTemplate|embed\.FS|ParseFiles)`},
+			Standards:   standard("OWASP-ASVS-V1.2", "OWASP-Template"),
+		},
+		{
+			ID:          "template.eval.dynamic",
+			Title:       "Dynamic code evaluation introduced",
+			Message:     "The diff introduces eval-like dynamic execution that expands injection risk.",
+			Remediation: "Remove dynamic evaluation and replace it with explicit safe logic or a restricted parser.",
+			Category:    "template",
+			Severity:    "critical",
+			Confidence:  "high",
+			Target:      "added",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(eval\(|new Function\(|execjs|vm\.runIn)`},
+			Standards:   standard("OWASP-ASVS-V1.2", "OWASP-Template"),
+		},
+		{
+			ID:          "file.archive.zipslip",
+			Title:       "Archive extraction may allow Zip Slip",
+			Message:     "The diff extracts archive entries into filesystem paths without nearby normalization or path boundary checks.",
+			Remediation: "Validate archive entry paths with clean, rel, and destination boundary checks before extraction.",
+			Category:    "file",
+			Severity:    "high",
+			Confidence:  "medium",
+			Target:      "added",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(zip\.OpenReader|tar\.NewReader|archive/zip|archive/tar)`},
+			Near:        []string{`(?i)(join|create|write|openfile|extract)`},
+			Absent:      []string{`(?i)(filepath\.Clean|path\.Clean|filepath\.Rel|strings\.HasPrefix)`},
+			Standards:   standard("OWASP-ASVS-V5", "OWASP-File"),
+		},
+		{
+			ID:          "file.upload.validation.deleted",
+			Title:       "Upload validation step removed",
+			Message:     "The diff removes a probable extension, MIME, size, or scanning validation step from an upload path.",
+			Remediation: "Restore upload validation for extension, content type, file signature, size, and scanning before storage.",
+			Category:    "file",
+			Severity:    "high",
+			Confidence:  "medium",
+			Target:      "deleted",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(mime|content.?type|extension|signature|magic|scan|clam|virus|maxUpload|size)`},
+			Near:        []string{`(?i)(upload|multipart|formfile|save|store|write)`},
+			Standards:   standard("OWASP-ASVS-V5.2", "OWASP-File"),
+		},
+	}
+}

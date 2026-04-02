@@ -1,0 +1,16 @@
+diff --git a/DMCHAT_GUIDE.md b/DMCHAT_GUIDE.md
+--- a/DMCHAT_GUIDE.md
++++ b/DMCHAT_GUIDE.md
+@@ -1 +1,3 @@
++# Open websocket with conversation.id.
++# When opening a DM chat screen:
++# open websocket
+
+diff --git a/utils/ratelimit.go b/utils/ratelimit.go
+--- a/utils/ratelimit.go
++++ b/utils/ratelimit.go
+@@ -1 +1,3 @@
++if token == "" || conversationID == "" {
++  return
++}
++delete(userLimits, scope+":"+identifier)

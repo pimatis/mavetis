@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# build outputs
+mavetis
+mavetis.exe
+/dist/
+
+# local fixtures
+rules.yaml
+sample.diff
+
+# editor and temp
+*.bak
+*.tmp
+AGENTS.md
