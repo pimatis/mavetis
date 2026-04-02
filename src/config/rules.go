@@ -43,7 +43,7 @@ func LoadRules(path string) ([]model.Rule, error) {
 		if rule.Title == "" {
 			return nil, fmt.Errorf("decode rule: missing title for %s", rule.ID)
 		}
-		if len(rule.Require) == 0 && len(rule.Any) == 0 {
+		if rule.Type == "" && len(rule.Require) == 0 && len(rule.Any) == 0 {
 			return nil, fmt.Errorf("decode rule: missing require or any for %s", rule.ID)
 		}
 		if rule.Severity == "" {
@@ -82,6 +82,7 @@ func mergeStrings(sets ...[]string) []string {
 
 func decodeRule(mapped map[string]any, rule *model.Rule) {
 	rule.ID, _ = yaml.String(mapped["id"])
+	rule.Type, _ = yaml.String(mapped["type"])
 	rule.Title, _ = yaml.String(mapped["title"])
 	rule.Message, _ = yaml.String(mapped["message"])
 	rule.Remediation, _ = yaml.String(mapped["remediation"])
@@ -90,14 +91,35 @@ func decodeRule(mapped map[string]any, rule *model.Rule) {
 	rule.Confidence, _ = yaml.String(mapped["confidence"])
 	rule.Target, _ = yaml.String(mapped["target"])
 	rule.Paths = yaml.Strings(mapped["paths"])
+	rule.FromPaths = yaml.Strings(mapped["from-paths"])
+	rule.ForbiddenPaths = yaml.Strings(mapped["forbidden-paths"])
 	rule.Ignore = yaml.Strings(mapped["ignore"])
-	rule.Require = mergeStrings(yaml.Strings(mapped["require"]), yaml.Strings(mapped["forbidden"]), yaml.Strings(mapped["protected"]), yaml.Strings(mapped["required"]))
+	rule.Require = mergeStrings(yaml.Strings(mapped["require"]), yaml.Strings(mapped["forbidden"]), yaml.Strings(mapped["protected"]), yaml.Strings(mapped["required"]), yaml.Strings(mapped["when"]))
 	rule.Any = mergeStrings(yaml.Strings(mapped["any"]), yaml.Strings(mapped["matchany"]))
 	rule.Near = mergeStrings(yaml.Strings(mapped["near"]), yaml.Strings(mapped["context"]))
 	rule.Absent = mergeStrings(yaml.Strings(mapped["absent"]), yaml.Strings(mapped["mitigate"]))
+	rule.Imports = mergeStrings(yaml.Strings(mapped["imports"]), yaml.Strings(mapped["forbidden-imports"]))
+	rule.Calls = mergeStrings(yaml.Strings(mapped["calls"]), yaml.Strings(mapped["required-calls"]))
+	rule.Middleware = mergeStrings(yaml.Strings(mapped["middleware"]), yaml.Strings(mapped["required-middleware"]))
+	rule.Keys = mergeStrings(yaml.Strings(mapped["keys"]), yaml.Strings(mapped["envs"]), yaml.Strings(mapped["forbidden-env"]))
+	rule.AllowedValues = mergeStrings(yaml.Strings(mapped["allowed-values"]), yaml.Strings(mapped["allow-values"]))
+	rule.ForbiddenValues = mergeStrings(yaml.Strings(mapped["forbidden-values"]), yaml.Strings(mapped["deny-values"]))
+	rule.ConstraintKey, _ = yaml.String(mapped["key"])
+	rule.ConstraintPattern, _ = yaml.String(mapped["pattern"])
 	rule.Standards = yaml.Strings(mapped["standards"])
 	if len(yaml.Strings(mapped["protected"])) != 0 && rule.Target == "" {
 		rule.Target = "deleted"
+	}
+	if rule.Type == "deletedLineGuard" && rule.Target == "" {
+		rule.Target = "deleted"
+	}
+	minValue, ok := yaml.Float(mapped["min"])
+	if ok {
+		rule.MinValue = minValue
+	}
+	maxValue, ok := yaml.Float(mapped["max"])
+	if ok {
+		rule.MaxValue = maxValue
 	}
 	entropy, ok := yaml.Float(mapped["entropy"])
 	if ok {

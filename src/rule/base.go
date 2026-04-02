@@ -14,6 +14,7 @@ func Builtins(config model.Config) []model.Rule {
 	rules = append(rules, crypto()...)
 	rules = append(rules, inject()...)
 	rules = append(rules, template()...)
+	rules = append(rules, boundary()...)
 	rules = append(rules, supply()...)
 	rules = append(rules, drift()...)
 	rules = append(rules, observe()...)

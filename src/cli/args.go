@@ -76,7 +76,8 @@ func helpMessage() string {
   rules list [--rules rules.yaml]
   rules show --id rule.id [--rules rules.yaml]
   rules test --diff sample.diff [--rules rules.yaml]
-  rules matrix [--rules rules.yaml]
+  rules matrix [--rules rules.yaml] [--profile auth]
+  rules snapshot --output snapshots.yaml [--path src/auth/**]
   update [--check]
   version
 
@@ -90,11 +91,23 @@ policy layer:
   - trust zones from config: zones.critical and zones.restricted
   - automatic severity uplift and stricter fail-on inside protected paths
 
+boundary enforcement:
+  - built-in permission boundary rules for public, admin, auth, and UI layers
+  - typed custom rule DSL for import, middleware, env, call, config, and path constraints
+
+supply-chain trust:
+  - lifecycle and dependency correlation, registry trust drift, lockfile consistency, and package trust policies
+
+security intent and snapshots:
+  - security intent mismatch detection for renamed or weakened protective functions
+  - repository security snapshots via rules snapshot and snapshot.path config
+
 examples:
   mavetis review --staged --path 'src/**' --profile auth --explain
   mavetis review --base main --path 'src/**' --profile backend
   mavetis ci --base main --format json --profile fintech
   mavetis rules validate --rules rules.yaml
+  mavetis rules snapshot --output .mavetis-snapshots.yaml --path 'src/auth/**'
   mavetis update --check
   mavetis hooks install
 

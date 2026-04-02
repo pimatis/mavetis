@@ -16,6 +16,14 @@ func infos(rules []model.Rule) []model.RuleInfo {
 	return items
 }
 
+func snapshotInfos(snapshots []model.Snapshot) []model.RuleInfo {
+	items := make([]model.RuleInfo, 0, len(snapshots))
+	for _, snapshot := range snapshots {
+		items = append(items, model.RuleInfo{ID: snapshot.ID, Title: "Repository security snapshot regressed", Category: snapshot.Category, Severity: snapshot.Severity, Standards: snapshot.Standards})
+	}
+	return items
+}
+
 func syntheticInfos() []model.RuleInfo {
 	return []model.RuleInfo{
 		{ID: "semantic.ssrf.flow", Title: "Request-controlled URL reaches outbound fetch", Category: "ssrf", Severity: "critical", Standards: []string{"OWASP-ASVS-V4.3"}},
@@ -43,6 +51,13 @@ func syntheticInfos() []model.RuleInfo {
 		{ID: "downgrade.auth.ratelimit", Title: "Rate limit threshold increased", Category: "auth", Severity: "high", Standards: []string{"OWASP-ASVS-V7.2"}},
 		{ID: "downgrade.timeout", Title: "Security-relevant timeout increased", Category: "config", Severity: "medium", Standards: []string{"OWASP-ASVS-V3.3", "OWASP-ASVS-V9.1"}},
 		{ID: "downgrade.auth.mfa", Title: "MFA requirement weakened", Category: "auth", Severity: "critical", Standards: []string{"OWASP-ASVS-V3.1"}},
+		{ID: "supply.lifecycle.dependency", Title: "Dependency addition paired with lifecycle script", Category: "supply", Severity: "critical", Standards: []string{"OWASP-ASVS-V14.2"}},
+		{ID: "supply.lock.missing", Title: "Dependency manifest changed without lockfile update", Category: "supply", Severity: "high", Standards: []string{"OWASP-ASVS-V14.2"}},
+		{ID: "supply.registry.drift", Title: "Private registry drifted to public registry", Category: "supply", Severity: "critical", Standards: []string{"OWASP-ASVS-V14.2"}},
+		{ID: "supply.registry.untrusted", Title: "Registry is outside trusted allowlist", Category: "supply", Severity: "high", Standards: []string{"OWASP-ASVS-V14.2"}},
+		{ID: "supply.package.denied", Title: "Dependency is denied by trust policy", Category: "supply", Severity: "critical", Standards: []string{"OWASP-ASVS-V14.2"}},
+		{ID: "supply.package.untrusted", Title: "Dependency falls outside package allowlist", Category: "supply", Severity: "high", Standards: []string{"OWASP-ASVS-V14.2"}},
+		{ID: "intent.mismatch", Title: "Security intent no longer matches implementation", Category: "intent", Severity: "high", Standards: []string{"OWASP-ASVS-V1.14"}},
 		{ID: "branch.guard.regression", Title: "Branch diff removes a guard while exposing a route", Category: "authorization", Severity: "critical", Standards: []string{"OWASP-ASVS-V4.1"}},
 		{ID: "branch.scope.regression", Title: "Branch diff weakens resource scoping while adding direct lookups", Category: "authorization", Severity: "critical", Standards: []string{"OWASP-ASVS-V4.1"}},
 		{ID: "branch.token.regression", Title: "Branch diff removes verification while adding decode-like token usage", Category: "token", Severity: "critical", Standards: []string{"OWASP-ASVS-V3.5"}},

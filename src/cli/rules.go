@@ -16,7 +16,7 @@ import (
 
 func runRules(arguments []string) int {
 	if len(arguments) == 0 {
-		return fail(errors.New("rules command requires validate, list, show, test, or matrix"))
+		return fail(errors.New("rules command requires validate, list, show, test, matrix, or snapshot"))
 	}
 	if arguments[0] == "validate" {
 		return validateRules(arguments[1:])
@@ -33,7 +33,10 @@ func runRules(arguments []string) int {
 	if arguments[0] == "matrix" {
 		return matrixRules(arguments[1:])
 	}
-	return fail(errors.New("rules command requires validate, list, show, test, or matrix"))
+	if arguments[0] == "snapshot" {
+		return snapshotRules(arguments[1:])
+	}
+	return fail(errors.New("rules command requires validate, list, show, test, matrix, or snapshot"))
 }
 
 func validateRules(arguments []string) int {
@@ -96,12 +99,19 @@ func showRule(arguments []string) int {
 		fmt.Printf("category: %s\n", item.Category)
 		fmt.Printf("severity: %s\n", item.Severity)
 		fmt.Printf("confidence: %s\n", item.Confidence)
+		fmt.Printf("type: %s\n", item.Type)
 		fmt.Printf("target: %s\n", item.Target)
 		fmt.Printf("require: %v\n", item.Require)
 		fmt.Printf("any: %v\n", item.Any)
 		fmt.Printf("near: %v\n", item.Near)
 		fmt.Printf("absent: %v\n", item.Absent)
+		fmt.Printf("imports: %v\n", item.Imports)
+		fmt.Printf("calls: %v\n", item.Calls)
+		fmt.Printf("middleware: %v\n", item.Middleware)
+		fmt.Printf("keys: %v\n", item.Keys)
 		fmt.Printf("paths: %v\n", item.Paths)
+		fmt.Printf("from-paths: %v\n", item.FromPaths)
+		fmt.Printf("forbidden-paths: %v\n", item.ForbiddenPaths)
 		fmt.Printf("standards: %v\n", item.Standards)
 		return 0
 	}

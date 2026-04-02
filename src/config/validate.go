@@ -59,6 +59,9 @@ func validateConfig(data model.Config) error {
 	if err := validateZones(data.Zones); err != nil {
 		return err
 	}
+	if err := validateSupply(data.Supply); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -116,6 +119,9 @@ func validateRule(data model.Rule) error {
 	if err := validateTarget(data.Target); err != nil {
 		return err
 	}
+	if err := validateRuleType(data); err != nil {
+		return err
+	}
 	if err := compileAll(data.Require); err != nil {
 		return err
 	}
@@ -128,7 +134,101 @@ func validateRule(data model.Rule) error {
 	if err := compileAll(data.Absent); err != nil {
 		return err
 	}
+	if err := compileAll(data.Imports); err != nil {
+		return err
+	}
+	if err := compileAll(data.Calls); err != nil {
+		return err
+	}
+	if err := compileAll(data.Middleware); err != nil {
+		return err
+	}
+	if err := compileAll(data.Keys); err != nil {
+		return err
+	}
+	if data.ConstraintPattern != "" {
+		if err := compileAll([]string{data.ConstraintPattern}); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func validateSupply(data model.Supply) error {
+	if err := validateListEntries(data.AllowPackages, "supply.allow-packages"); err != nil {
+		return err
+	}
+	if err := validateListEntries(data.DenyPackages, "supply.deny-packages"); err != nil {
+		return err
+	}
+	if err := validateListEntries(data.TrustedRegistries, "supply.trusted-registries"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateListEntries(values []string, field string) error {
+	seen := map[string]struct{}{}
+	for _, item := range values {
+		value := strings.TrimSpace(item)
+		if value == "" {
+			return fmt.Errorf("invalid %s: empty value", field)
+		}
+		if _, ok := seen[value]; ok {
+			return fmt.Errorf("invalid %s: duplicate value %s", field, value)
+		}
+		seen[value] = struct{}{}
+	}
+	return nil
+}
+
+func validateRuleType(data model.Rule) error {
+	if data.Type == "" {
+		return nil
+	}
+	if data.Type == "forbiddenImport" {
+		if len(data.Imports) == 0 {
+			return fmt.Errorf("invalid rule %s: forbiddenImport requires imports", data.ID)
+		}
+		return nil
+	}
+	if data.Type == "deletedLineGuard" {
+		if len(data.Require) == 0 {
+			return fmt.Errorf("invalid rule %s: deletedLineGuard requires require", data.ID)
+		}
+		return nil
+	}
+	if data.Type == "forbiddenEnv" {
+		if len(data.Keys) == 0 {
+			return fmt.Errorf("invalid rule %s: forbiddenEnv requires keys", data.ID)
+		}
+		return nil
+	}
+	if data.Type == "requiredMiddleware" {
+		if len(data.Middleware) == 0 {
+			return fmt.Errorf("invalid rule %s: requiredMiddleware requires middleware", data.ID)
+		}
+		return nil
+	}
+	if data.Type == "requiredCall" {
+		if len(data.Calls) == 0 {
+			return fmt.Errorf("invalid rule %s: requiredCall requires calls", data.ID)
+		}
+		return nil
+	}
+	if data.Type == "configKeyConstraint" {
+		if data.ConstraintKey == "" && len(data.Keys) == 0 {
+			return fmt.Errorf("invalid rule %s: configKeyConstraint requires key", data.ID)
+		}
+		return nil
+	}
+	if data.Type == "pathBoundary" {
+		if len(data.Imports) == 0 && len(data.ForbiddenPaths) == 0 {
+			return fmt.Errorf("invalid rule %s: pathBoundary requires imports or forbidden-paths", data.ID)
+		}
+		return nil
+	}
+	return fmt.Errorf("invalid rule type: %s", data.Type)
 }
 
 func validateConfidence(value string) error {

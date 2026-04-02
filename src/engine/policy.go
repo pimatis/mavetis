@@ -27,15 +27,15 @@ type profileSpec struct {
 
 var profiles = map[string]profileSpec{
 	"auth": {
-		categories: toSet("auth", "authorization", "session", "token", "oauth", "crypto"),
+		categories: toSet("auth", "authorization", "session", "token", "oauth", "crypto", "boundary", "intent"),
 		prefixes:   []string{"observe.auth.", "downgrade.auth.", "downgrade.cookie.", "downgrade.crypto."},
 	},
 	"backend": {
-		categories: toSet("auth", "authorization", "session", "token", "oauth", "crypto", "injection", "ssrf", "deserialization", "file", "transport", "logging", "error", "privacy", "supply", "config", "template", "cors"),
+		categories: toSet("auth", "authorization", "session", "token", "oauth", "crypto", "injection", "ssrf", "deserialization", "file", "transport", "logging", "error", "privacy", "supply", "config", "template", "cors", "boundary", "intent"),
 		prefixes:   []string{"observe.", "config.", "downgrade."},
 	},
 	"frontend": {
-		categories: toSet("auth", "session", "token", "cors", "xss", "logging", "error", "privacy", "config"),
+		categories: toSet("auth", "session", "token", "cors", "xss", "logging", "error", "privacy", "config", "boundary", "intent"),
 		prefixes:   []string{"observe.", "config.", "downgrade.cookie.", "downgrade.timeout"},
 	},
 }

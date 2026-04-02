@@ -1,23 +1,36 @@
 package model
 
 type Rule struct {
-	ID          string
-	Title       string
-	Message     string
-	Remediation string
-	Category    string
-	Severity    string
-	Confidence  string
-	Target      string
-	Paths       []string
-	Ignore      []string
-	Require     []string
-	Any         []string
-	Near        []string
-	Absent      []string
-	Entropy     float64
-	Standards   []string
-	Mask        bool
+	ID                string
+	Type              string
+	Title             string
+	Message           string
+	Remediation       string
+	Category          string
+	Severity          string
+	Confidence        string
+	Target            string
+	Paths             []string
+	Ignore            []string
+	Require           []string
+	Any               []string
+	Near              []string
+	Absent            []string
+	Imports           []string
+	Calls             []string
+	Middleware        []string
+	Keys              []string
+	AllowedValues     []string
+	ForbiddenValues   []string
+	FromPaths         []string
+	ForbiddenPaths    []string
+	ConstraintKey     string
+	ConstraintPattern string
+	MinValue          float64
+	MaxValue          float64
+	Entropy           float64
+	Standards         []string
+	Mask              bool
 }
 
 func SeverityRank(value string) int {

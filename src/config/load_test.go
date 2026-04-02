@@ -9,6 +9,7 @@ import (
 func TestLoad(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".mavetis.yaml")
+	snapshotPath := filepath.Join(dir, "snapshots.yaml")
 	content := `severity: medium
 failon: critical
 profile: auth
@@ -20,12 +21,33 @@ allow:
 company:
   prefixes:
     - corp_
+supply:
+  allow-packages:
+    - '@company/*'
+  deny-packages:
+    - left-pad
+  trusted-registries:
+    - registry.company.local
+snapshot:
+  path: ` + snapshotPath + `
 zones:
   critical:
     - src/auth/**
   restricted:
     - src/api/admin/**
 `
+	snapshotContent := `snapshots:
+  - id: auth.service.verify
+    path: src/auth/service.go
+    anchor: verifyToken
+    category: token
+    severity: high
+    require:
+      - verify
+`
+	if err := os.WriteFile(snapshotPath, []byte(snapshotContent), 0o600); err != nil {
+		t.Fatalf("write snapshots: %v", err)
+	}
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
@@ -47,6 +69,12 @@ zones:
 	}
 	if len(config.Zones.Restricted) != 1 || config.Zones.Restricted[0] != "src/api/admin/**" {
 		t.Fatalf("unexpected restricted zones: %#v", config.Zones.Restricted)
+	}
+	if len(config.Supply.DenyPackages) != 1 || config.Supply.DenyPackages[0] != "left-pad" {
+		t.Fatalf("unexpected supply policy: %#v", config.Supply)
+	}
+	if config.Snapshot.Path != snapshotPath || len(config.Snapshots) != 1 {
+		t.Fatalf("unexpected snapshots: %#v %#v", config.Snapshot, config.Snapshots)
 	}
 }
 
@@ -85,6 +113,23 @@ func TestLoadRejectsInvalidZones(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsInvalidSupplyPolicy(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".mavetis.yaml")
+	content := `supply:
+  allow-packages:
+    - '@company/*'
+    - '@company/*'
+`
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected invalid supply policy error")
+	}
+}
+
 func TestLoadRules(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "rules.yaml")
@@ -107,6 +152,19 @@ func TestLoadRules(t *testing.T) {
     severity: critical
     protected:
       - requireAuth
+  - id: custom.boundary
+    type: forbiddenImport
+    title: Boundary
+    message: Boundary violated
+    remediation: Fix it
+    category: boundary
+    severity: high
+    confidence: high
+    target: added
+    paths:
+      - src/ui/**
+    imports:
+      - '(?i)auth'
 `
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("write rules: %v", err)
@@ -115,7 +173,7 @@ func TestLoadRules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load rules: %v", err)
 	}
-	if len(rules) != 2 || rules[0].ID != "custom.secret" {
+	if len(rules) != 3 || rules[0].ID != "custom.secret" {
 		t.Fatalf("unexpected rules: %#v", rules)
 	}
 	if len(rules[0].Any) != 1 || rules[0].Any[0] != "corp_[A-Za-z0-9]{8,}" {
@@ -126,6 +184,9 @@ func TestLoadRules(t *testing.T) {
 	}
 	if rules[1].Target != "deleted" || len(rules[1].Require) != 1 {
 		t.Fatalf("unexpected protected rule decoding: %#v", rules[1])
+	}
+	if rules[2].Type != "forbiddenImport" || len(rules[2].Imports) != 1 {
+		t.Fatalf("unexpected typed rule decoding: %#v", rules[2])
 	}
 }
 

@@ -13,11 +13,16 @@ import (
 )
 
 type compiled struct {
-	rule    model.Rule
-	require []*regexp.Regexp
-	any     []*regexp.Regexp
-	near    []*regexp.Regexp
-	absent  []*regexp.Regexp
+	rule       model.Rule
+	require    []*regexp.Regexp
+	any        []*regexp.Regexp
+	near       []*regexp.Regexp
+	absent     []*regexp.Regexp
+	imports    []*regexp.Regexp
+	calls      []*regexp.Regexp
+	middleware []*regexp.Regexp
+	keys       []*regexp.Regexp
+	constraint *regexp.Regexp
 }
 
 type allowance struct {
@@ -30,6 +35,7 @@ func Review(diff model.Diff, config model.Config, rules []model.Rule) (model.Rep
 	report.Policy = policyReport(config)
 	report.Summary.Files = len(diff.Files)
 	report.Rules = infos(rules)
+	report.Rules = append(report.Rules, snapshotInfos(config.Snapshots)...)
 	compiledRules, err := compile(rules)
 	if err != nil {
 		return report, err
@@ -75,8 +81,11 @@ func Review(diff model.Diff, config model.Config, rules []model.Rule) (model.Rep
 	appendFindings(&findings, seen, goSemanticFindings(diff), config, zoneCache)
 	appendFindings(&findings, seen, nonceFindings(diff), config, zoneCache)
 	appendFindings(&findings, seen, manifestFindings(diff), config, zoneCache)
+	appendFindings(&findings, seen, supplyTrustFindings(diff, config), config, zoneCache)
 	appendFindings(&findings, seen, signatureFindings(diff), config, zoneCache)
 	appendFindings(&findings, seen, downgradeFindings(diff), config, zoneCache)
+	appendFindings(&findings, seen, intentFindings(diff), config, zoneCache)
+	appendFindings(&findings, seen, snapshotFindings(diff, config.Snapshots), config, zoneCache)
 	appendFindings(&findings, seen, crossFindings(diff), config, zoneCache)
 	sortFindings(findings)
 	report.Findings = findings
@@ -119,6 +128,41 @@ func compile(rules []model.Rule) ([]compiled, error) {
 			}
 			item.absent = append(item.absent, re)
 		}
+		for _, pattern := range rule.Imports {
+			re, err := regexp.Compile(pattern)
+			if err != nil {
+				return nil, fmt.Errorf("compile rule %s: %w", rule.ID, err)
+			}
+			item.imports = append(item.imports, re)
+		}
+		for _, pattern := range rule.Calls {
+			re, err := regexp.Compile(pattern)
+			if err != nil {
+				return nil, fmt.Errorf("compile rule %s: %w", rule.ID, err)
+			}
+			item.calls = append(item.calls, re)
+		}
+		for _, pattern := range rule.Middleware {
+			re, err := regexp.Compile(pattern)
+			if err != nil {
+				return nil, fmt.Errorf("compile rule %s: %w", rule.ID, err)
+			}
+			item.middleware = append(item.middleware, re)
+		}
+		for _, pattern := range rule.Keys {
+			re, err := regexp.Compile(pattern)
+			if err != nil {
+				return nil, fmt.Errorf("compile rule %s: %w", rule.ID, err)
+			}
+			item.keys = append(item.keys, re)
+		}
+		if rule.ConstraintPattern != "" {
+			re, err := regexp.Compile(rule.ConstraintPattern)
+			if err != nil {
+				return nil, fmt.Errorf("compile rule %s: %w", rule.ID, err)
+			}
+			item.constraint = re
+		}
 		items = append(items, item)
 	}
 	return items, nil
@@ -132,11 +176,17 @@ func evaluate(item compiled, path string, hunkText string, line model.DiffLine, 
 	if len(item.rule.Paths) != 0 && !match.Any(item.rule.Paths, path) {
 		return finding, false
 	}
+	if len(item.rule.FromPaths) != 0 && !match.Any(item.rule.FromPaths, path) {
+		return finding, false
+	}
 	if match.Any(item.rule.Ignore, path) {
 		return finding, false
 	}
 	if allow(allowlist, line.Text) {
 		return finding, false
+	}
+	if item.rule.Type != "" {
+		return evaluateTyped(item, path, hunkText, line)
 	}
 	for _, re := range item.require {
 		if !re.MatchString(line.Text) {

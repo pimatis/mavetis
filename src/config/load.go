@@ -33,6 +33,16 @@ func Load(path string) (model.Config, error) {
 	if err := validateConfig(config); err != nil {
 		return config, err
 	}
+	snapshotPath := config.Snapshot.Path
+	if snapshotPath != "" && !filepath.IsAbs(snapshotPath) {
+		snapshotPath = filepath.Join(filepath.Dir(path), snapshotPath)
+		config.Snapshot.Path = filepath.Clean(snapshotPath)
+	}
+	snapshots, err := LoadSnapshots(snapshotPath)
+	if err != nil {
+		return config, err
+	}
+	config.Snapshots = snapshots
 	return config, nil
 }
 
@@ -83,6 +93,22 @@ func decodeConfig(mapped map[string]any, config *model.Config) {
 		companyMap, err := yaml.Map(company)
 		if err == nil {
 			config.Company.Prefixes = yaml.Strings(companyMap["prefixes"])
+		}
+	}
+	supply, ok := mapped["supply"]
+	if ok {
+		supplyMap, err := yaml.Map(supply)
+		if err == nil {
+			config.Supply.AllowPackages = yaml.Strings(supplyMap["allow-packages"])
+			config.Supply.DenyPackages = yaml.Strings(supplyMap["deny-packages"])
+			config.Supply.TrustedRegistries = yaml.Strings(supplyMap["trusted-registries"])
+		}
+	}
+	snapshot, ok := mapped["snapshot"]
+	if ok {
+		snapshotMap, err := yaml.Map(snapshot)
+		if err == nil {
+			config.Snapshot.Path, _ = yaml.String(snapshotMap["path"])
 		}
 	}
 	zones, ok := mapped["zones"]

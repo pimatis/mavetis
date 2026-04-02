@@ -35,6 +35,7 @@ func TestBuiltinsExposeExpandedFamilies(t *testing.T) {
 		"config.csp.disabled",
 		"observe.request.body",
 		"auth.mfa.deleted",
+		"boundary.ui.auth",
 	}
 	for _, id := range expected {
 		if !contains(rules, id) {
