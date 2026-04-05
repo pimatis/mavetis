@@ -35,3 +35,21 @@ func TestCrossFindingsCorrelateBranchSignals(t *testing.T) {
 		t.Fatalf("unexpected rule: %#v", findings[0])
 	}
 }
+
+func TestSemanticTemplateSkipsGenericParseCalls(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "src/cli/args.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{
+				{Kind: "added", Text: `flagArguments := []string{"body"}`, NewNumber: 1},
+				{Kind: "added", Text: `if err := flags.Parse(flagArguments); err != nil {`, NewNumber: 2},
+			},
+		}},
+	}}}
+	findings := semanticFindings(diff)
+	for _, finding := range findings {
+		if finding.RuleID == "semantic.template.flow" {
+			t.Fatalf("unexpected template finding: %#v", finding)
+		}
+	}
+}

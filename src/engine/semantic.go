@@ -15,7 +15,7 @@ var execSink = regexp.MustCompile(`(?i)(exec\(|spawn\(|system\(|subprocess\.|sh\
 var pathSink = regexp.MustCompile(`(?i)(ReadFile|WriteFile|os\.Open|os\.OpenFile|filepath\.Join|path\.Join|os\.Create)`)
 var sqlSink = regexp.MustCompile(`(?i)(select\b.+\bfrom\b|insert\b.+\binto\b|update\b.+\bset\b|delete\b.+\bfrom\b|fmt\.sprint|sprintf|\+)`)
 var lookupSink = regexp.MustCompile(`(?i)(find|first|getby|get\(|load|select|delete|update)`)
-var templateSink = regexp.MustCompile(`(?i)(template\.New|Parse\(|render_template_string|Handlebars\.compile|ejs\.render|eval\(|new Function\()`)
+var templateSink = regexp.MustCompile(`(?i)(template\.New|template\.Parse|ParseFiles\(|ParseGlob\(|ParseFS\(|render_template_string|Handlebars\.compile|ejs\.render|eval\(|new Function\()`)
 
 func semanticFindings(diff model.Diff) []model.Finding {
 	findings := make([]model.Finding, 0)
@@ -23,7 +23,7 @@ func semanticFindings(diff model.Diff) []model.Finding {
 		if !analyze.Executable(file.Path) {
 			continue
 		}
-		if analyze.Fixture(file.Path) {
+		if analyze.ReviewArtifact(file.Path) {
 			continue
 		}
 		for _, hunk := range file.Hunks {

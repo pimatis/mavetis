@@ -4,14 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/Pimatis/mavetis/src/config"
 	"github.com/Pimatis/mavetis/src/diff"
 	"github.com/Pimatis/mavetis/src/engine"
 	"github.com/Pimatis/mavetis/src/git"
 	"github.com/Pimatis/mavetis/src/hook"
+	"github.com/Pimatis/mavetis/src/match"
 	"github.com/Pimatis/mavetis/src/model"
 	"github.com/Pimatis/mavetis/src/output"
+	"github.com/Pimatis/mavetis/src/resolve"
+	"github.com/Pimatis/mavetis/src/scan"
 )
 
 func Execute(arguments []string) int {
@@ -61,6 +66,9 @@ func runReview(arguments []string, ci bool) int {
 	if err != nil {
 		return fail(err)
 	}
+	if len(spec.Files) != 0 {
+		return runFileReview(spec, cfg, rules)
+	}
 	raw, meta, err := git.Review(spec)
 	if err != nil {
 		return fail(err)
@@ -84,6 +92,134 @@ func runReview(arguments []string, ci bool) int {
 		return 1
 	}
 	return 0
+}
+
+func runFileReview(spec model.Review, cfg model.Config, rules []model.Rule) int {
+	root, err := scan.Root()
+	if err != nil {
+		return fail(err)
+	}
+	files, err := scan.LoadFiles(root, spec.Files)
+	if err != nil {
+		return fail(err)
+	}
+	files = filterScannedFiles(files, spec.Path)
+	reviewFiles := append([]scan.ScannedFile{}, files...)
+	suggestions := make([]model.Suggestion, 0)
+	if spec.WithSuggested {
+		discovered, additions, discoverErr := resolve.Discover(root, files, resolve.DefaultLimits())
+		if discoverErr != nil {
+			return fail(discoverErr)
+		}
+		reviewFiles = appendUniqueFiles(reviewFiles, discovered)
+		suggestions = markReviewedSuggestions(additions)
+	}
+	if !spec.WithSuggested {
+		additions, suggestErr := resolve.Suggest(root, files, resolve.DefaultLimits())
+		if suggestErr != nil {
+			return fail(suggestErr)
+		}
+		suggestions = additions
+	}
+	parsed := scan.FromFiles(reviewFiles)
+	report, err := engine.Review(parsed, cfg, rules)
+	if err != nil {
+		return fail(err)
+	}
+	report.Meta.Mode = "file"
+	if spec.Path != "" {
+		report.Meta.Mode = report.Meta.Mode + ":" + spec.Path
+	}
+	report.Suggestions = suggestions
+	if len(suggestions) != 0 && !spec.WithSuggested {
+		report.SuggestedCommand = suggestedCommand(spec)
+	}
+	if err := render(report, cfg.Output, spec.Explain); err != nil {
+		return fail(err)
+	}
+	if blocked(report, cfg.FailOn) {
+		return 1
+	}
+	return 0
+}
+
+func filterScannedFiles(files []scan.ScannedFile, pattern string) []scan.ScannedFile {
+	if pattern == "" {
+		return files
+	}
+	filtered := make([]scan.ScannedFile, 0, len(files))
+	for _, file := range files {
+		if !match.Glob(pattern, file.Path) {
+			continue
+		}
+		filtered = append(filtered, file)
+	}
+	return filtered
+}
+
+func appendUniqueFiles(current []scan.ScannedFile, additions []scan.ScannedFile) []scan.ScannedFile {
+	seen := map[string]struct{}{}
+	for _, file := range current {
+		seen[file.Path] = struct{}{}
+	}
+	for _, file := range additions {
+		if _, ok := seen[file.Path]; ok {
+			continue
+		}
+		seen[file.Path] = struct{}{}
+		current = append(current, file)
+	}
+	return current
+}
+
+func markReviewedSuggestions(suggestions []model.Suggestion) []model.Suggestion {
+	for index := range suggestions {
+		suggestions[index].Reviewed = true
+	}
+	return suggestions
+}
+
+func suggestedCommand(spec model.Review) string {
+	parts := []string{"mavetis", "review"}
+	for _, file := range spec.Files {
+		parts = append(parts, shellPart(file))
+	}
+	if spec.Path != "" {
+		parts = append(parts, "--path", shellPart(spec.Path))
+	}
+	if spec.Profile != "" {
+		parts = append(parts, "--profile", shellPart(spec.Profile))
+	}
+	if spec.Severity != "" {
+		parts = append(parts, "--severity", shellPart(spec.Severity))
+	}
+	if spec.FailOn != "" {
+		parts = append(parts, "--fail-on", shellPart(spec.FailOn))
+	}
+	if spec.ConfigPath != "" {
+		parts = append(parts, "--config", shellPart(spec.ConfigPath))
+	}
+	if spec.RulesPath != "" {
+		parts = append(parts, "--rules", shellPart(spec.RulesPath))
+	}
+	if spec.Format != "" {
+		parts = append(parts, "--format", shellPart(spec.Format))
+	}
+	if spec.Explain {
+		parts = append(parts, "--explain")
+	}
+	parts = append(parts, "--with-suggested")
+	return strings.Join(parts, " ")
+}
+
+func shellPart(value string) string {
+	if value == "" {
+		return `""`
+	}
+	if strings.ContainsAny(value, " \t\n\r'\"\\$&;|<>*?()[]{}") {
+		return strconv.Quote(value)
+	}
+	return value
 }
 
 func runHooks(arguments []string) int {

@@ -134,3 +134,61 @@ func TestBuiltinsAvoidCommonFalsePositives(t *testing.T) {
 		}
 	}
 }
+
+func TestReviewFileModeSkipsDiffOnlyAnalyzers(t *testing.T) {
+	diff := model.Diff{
+		Meta: model.DiffMeta{Mode: "file"},
+		Files: []model.DiffFile{{
+			Path: "auth.go",
+			Hunks: []model.DiffHunk{{
+				Lines: []model.DiffLine{
+					{Kind: "deleted", Text: `requireAuth(user)`, OldNumber: 1},
+					{Kind: "added", Text: `router.Get("/public", handler)`, NewNumber: 2},
+					{Kind: "deleted", Text: `requireMFA = true`, OldNumber: 3},
+					{Kind: "added", Text: `requireMFA = false`, NewNumber: 4},
+				},
+			}},
+		}},
+	}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{Severity: "low"}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "branch.guard.regression" {
+			t.Fatalf("unexpected branch correlation: %#v", finding)
+		}
+		if finding.RuleID == "downgrade.auth.mfa" {
+			t.Fatalf("unexpected downgrade correlation: %#v", finding)
+		}
+	}
+}
+
+func TestReviewFileModeKeepsSemanticAnalysis(t *testing.T) {
+	diff := model.Diff{
+		Meta: model.DiffMeta{Mode: "file"},
+		Files: []model.DiffFile{{
+			Path: "server.go",
+			Hunks: []model.DiffHunk{{
+				Lines: []model.DiffLine{
+					{Kind: "added", Text: `target := r.URL.Query().Get("url")`, NewNumber: 1},
+					{Kind: "added", Text: `http.Get(target)`, NewNumber: 2},
+				},
+			}},
+		}},
+	}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{Severity: "low"}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	found := false
+	for _, finding := range report.Findings {
+		if finding.RuleID != "semantic.ssrf.flow" {
+			continue
+		}
+		found = true
+	}
+	if !found {
+		t.Fatalf("expected semantic finding, got %#v", report.Findings)
+	}
+}

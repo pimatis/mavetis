@@ -43,3 +43,21 @@ func BenchmarkReviewPolicyProfile(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkReviewFileMode(b *testing.B) {
+	lines := make([]model.DiffLine, 0, 500)
+	for index := 0; index < 250; index++ {
+		lines = append(lines, model.DiffLine{Kind: "added", Text: `target := r.URL.Query().Get("url")`, NewNumber: index*2 + 1})
+		lines = append(lines, model.DiffLine{Kind: "added", Text: `http.Get(target)`, NewNumber: index*2 + 2})
+	}
+	diff := model.Diff{Meta: model.DiffMeta{Mode: "file"}, Files: []model.DiffFile{{Path: "service/review.go", Hunks: []model.DiffHunk{{Lines: lines}}}}}
+	config := model.Config{Severity: "low"}
+	ruleset := rule.Builtins(config)
+	b.ResetTimer()
+	for index := 0; index < b.N; index++ {
+		_, err := Review(diff, config, ruleset)
+		if err != nil {
+			b.Fatalf("review failed: %v", err)
+		}
+	}
+}

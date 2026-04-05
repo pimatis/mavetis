@@ -1,15 +1,23 @@
 package cli
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"os"
+	"strings"
 
 	"github.com/Pimatis/mavetis/src/model"
 )
 
+const maxFileTargets = 128
+
 func parseReview(arguments []string, ci bool) (model.Review, error) {
 	spec := model.Review{}
+	flagArguments, fileArguments, err := splitReviewArguments(arguments)
+	if err != nil {
+		return spec, err
+	}
 	flags := flag.NewFlagSet("review", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 	flags.BoolVar(&spec.Staged, "staged", false, "Review staged changes")
@@ -23,12 +31,55 @@ func parseReview(arguments []string, ci bool) (model.Review, error) {
 	flags.StringVar(&spec.RulesPath, "rules", "", "Custom rules path")
 	flags.StringVar(&spec.Path, "path", "", "Limit review to a path glob")
 	flags.BoolVar(&spec.Explain, "explain", false, "Include finding reasons in text output")
-	if err := flags.Parse(arguments); err != nil {
+	flags.BoolVar(&spec.WithSuggested, "with-suggested", false, "Review bounded suggested local dependencies together with the requested files")
+	flags.BoolVar(&spec.WithSuggested, "follow-imports", false, "Review bounded suggested local dependencies together with the requested files")
+	flags.BoolVar(&spec.StdinTargets, "stdin-targets", false, "Read newline-separated review targets from stdin")
+	if err := flags.Parse(flagArguments); err != nil {
 		return spec, err
+	}
+	remaining := flags.Args()
+	if len(remaining) != 0 {
+		return spec, errors.New("unexpected positional arguments")
+	}
+	for _, argument := range fileArguments {
+		target := normalizeReviewTarget(argument)
+		if target == "" {
+			return spec, errors.New("empty @file target")
+		}
+		spec.Files = append(spec.Files, target)
+		if len(spec.Files) > maxFileTargets {
+			return spec, errors.New("too many @file targets")
+		}
+	}
+	if spec.StdinTargets {
+		targets, readErr := readReviewTargets(os.Stdin)
+		if readErr != nil {
+			return spec, readErr
+		}
+		spec.Files = append(spec.Files, targets...)
+		if len(spec.Files) == 0 {
+			return spec, errors.New("stdin produced no review targets")
+		}
+		if len(spec.Files) > maxFileTargets {
+			return spec, errors.New("too many @file targets")
+		}
 	}
 	if ci {
 		spec.Base = defaultBase(spec.Base)
 		spec.Mode = "ci"
+	}
+	if len(spec.Files) != 0 {
+		if ci {
+			return spec, errors.New("ci mode does not support @file targets")
+		}
+		if spec.Staged || spec.Base != "" || spec.Head != "" {
+			return spec, errors.New("@file targets cannot be combined with --staged, --base, or --head")
+		}
+		spec.Mode = "file"
+		if err := validateReview(spec); err != nil {
+			return spec, err
+		}
+		return spec, nil
 	}
 	if !ci && spec.Staged {
 		spec.Mode = "review"
@@ -47,15 +98,99 @@ func parseReview(arguments []string, ci bool) (model.Review, error) {
 	if ci {
 		return spec, validateReview(spec)
 	}
-	remaining := flags.Args()
-	if len(remaining) != 0 {
-		return spec, errors.New("unexpected positional arguments")
-	}
 	spec.Mode = "review"
 	if err := validateReview(spec); err != nil {
 		return spec, err
 	}
 	return spec, nil
+}
+
+func splitReviewArguments(arguments []string) ([]string, []string, error) {
+	flagArguments := make([]string, 0, len(arguments))
+	fileArguments := make([]string, 0, len(arguments))
+	valueFlags := map[string]struct{}{
+		"--base":     {},
+		"--head":     {},
+		"--format":   {},
+		"--severity": {},
+		"--fail-on":  {},
+		"--profile":  {},
+		"--config":   {},
+		"--rules":    {},
+		"--path":     {},
+	}
+	boolFlags := map[string]struct{}{
+		"--staged":         {},
+		"--explain":        {},
+		"--with-suggested": {},
+		"--follow-imports": {},
+		"--stdin-targets":  {},
+	}
+	consumeFiles := false
+	for index := 0; index < len(arguments); index++ {
+		argument := arguments[index]
+		if consumeFiles {
+			fileArguments = append(fileArguments, argument)
+			continue
+		}
+		if argument == "--" {
+			consumeFiles = true
+			continue
+		}
+		if strings.HasPrefix(argument, "--") {
+			name := argument
+			if cut := strings.Index(argument, "="); cut >= 0 {
+				name = argument[:cut]
+			}
+			if _, ok := valueFlags[name]; ok {
+				flagArguments = append(flagArguments, argument)
+				if strings.Contains(argument, "=") {
+					continue
+				}
+				if index+1 >= len(arguments) {
+					return nil, nil, errors.New("missing value for " + name)
+				}
+				index++
+				flagArguments = append(flagArguments, arguments[index])
+				continue
+			}
+			if _, ok := boolFlags[name]; ok {
+				flagArguments = append(flagArguments, argument)
+				continue
+			}
+			flagArguments = append(flagArguments, argument)
+			continue
+		}
+		if strings.HasPrefix(argument, "-") {
+			flagArguments = append(flagArguments, argument)
+			continue
+		}
+		fileArguments = append(fileArguments, argument)
+	}
+	return flagArguments, fileArguments, nil
+}
+
+func normalizeReviewTarget(argument string) string {
+	return strings.TrimSpace(strings.TrimPrefix(argument, "@"))
+}
+
+func readReviewTargets(file *os.File) ([]string, error) {
+	scanner := bufio.NewScanner(file)
+	targets := make([]string, 0)
+	for scanner.Scan() {
+		line := normalizeReviewTarget(scanner.Text())
+		if line == "" {
+			continue
+		}
+		targets = append(targets, line)
+		if len(targets) > maxFileTargets {
+			return nil, errors.New("too many @file targets")
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return targets, nil
 }
 
 func defaultBase(value string) string {
@@ -69,6 +204,7 @@ func helpMessage() string {
 	return `mavetis commands:
   review --staged [--path src/**] [--profile auth] [--explain]
   review --base main [--path src/**] [--profile backend]
+  review src/file.go [--with-suggested] [--format json]
   ci --base main [--path src/**] [--profile fintech]
   hooks install
   hooks uninstall
@@ -102,9 +238,18 @@ security intent and snapshots:
   - security intent mismatch detection for renamed or weakened protective functions
   - repository security snapshots via rules snapshot and snapshot.path config
 
+file review:
+  mavetis review src/auth/login.go src/api/handler.ts --explain
+  mavetis review src/rule --with-suggested
+  mavetis review @config/nginx.conf --profile backend --format json
+  mavetis review src/auth/*.go --severity high
+  printf '%s\n' src/rule/token.go src/rule/scope.go | mavetis review --stdin-targets
+  mavetis review src/scan/load.go --with-suggested
+
 examples:
   mavetis review --staged --path 'src/**' --profile auth --explain
   mavetis review --base main --path 'src/**' --profile backend
+  mavetis review src/scan/load.go --with-suggested
   mavetis ci --base main --format json --profile fintech
   mavetis rules validate --rules rules.yaml
   mavetis rules snapshot --output .mavetis-snapshots.yaml --path 'src/auth/**'

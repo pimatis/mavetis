@@ -53,16 +53,19 @@ type Snapshot struct {
 }
 
 type Review struct {
-	Mode       string
-	Base       string
-	Head       string
-	Format     string
-	Severity   string
-	FailOn     string
-	Profile    string
-	ConfigPath string
-	RulesPath  string
-	Path       string
-	Explain    bool
-	Staged     bool
+	Mode          string
+	Base          string
+	Head          string
+	Format        string
+	Severity      string
+	FailOn        string
+	Profile       string
+	ConfigPath    string
+	RulesPath     string
+	Path          string
+	Explain       bool
+	Staged        bool
+	WithSuggested bool
+	StdinTargets  bool
+	Files         []string
 }

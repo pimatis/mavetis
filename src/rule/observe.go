@@ -14,7 +14,7 @@ func observe() []model.Rule {
 			Confidence:  "high",
 			Target:      "added",
 			Paths:       codeFiles(),
-			Require:     []string{`(?i)(log\.|logger\.|console\.|print\(|fmt\.(Print|Printf)|zap\.|slog\.|trace\.|span\.).*(request\.body|req\.body|body\b|payload\b|ctx\.Body|RawBody)`},
+			Require:     []string{`(?i)(log\.|logger\.|console\.|print\(|fmt\.(Print|Printf)|zap\.|slog\.|trace\.|span\.).*(request\.body|req\.body|payload\b|ctx\.Body|RawBody|rawBody|bodyBytes)`},
 			Standards:   standard("OWASP-ASVS-V8.1", "OWASP-Logging"),
 			Mask:        true,
 		},

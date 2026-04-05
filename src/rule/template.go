@@ -14,9 +14,9 @@ func template() []model.Rule {
 			Confidence:  "medium",
 			Target:      "added",
 			Paths:       codeFiles(),
-			Require:     []string{`(?i)(template\.New|Parse\(|render_template_string|jinja2|Handlebars\.compile|ejs\.render|Mustache\.render)`},
+			Require:     []string{`(?i)(template\.New|template\.Parse|ParseFiles\(|ParseGlob\(|ParseFS\(|render_template_string|jinja2|Handlebars\.compile|ejs\.render|Mustache\.render)`},
 			Near:        []string{`(?i)(query|params|body|input|request|ctx|user)`},
-			Absent:      []string{`(?i)(trustedTemplate|staticTemplate|embed\.FS|ParseFiles)`},
+			Absent:      []string{`(?i)(trustedTemplate|staticTemplate|embed\.FS)`},
 			Standards:   standard("OWASP-ASVS-V1.2", "OWASP-Template"),
 		},
 		{

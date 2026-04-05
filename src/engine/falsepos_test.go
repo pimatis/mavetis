@@ -29,3 +29,58 @@ func TestRealWorldFalsePositiveFixtureStaysQuiet(t *testing.T) {
 		}
 	}
 }
+
+func TestReviewSkipsSelfReviewArtifacts(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "src/engine/review_test.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{{Kind: "added", Text: `http.Get(target)`, NewNumber: 1}},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	if len(report.Findings) != 0 {
+		t.Fatalf("expected self-review artifact skip, got %#v", report.Findings)
+	}
+}
+
+func TestObserveRequestBodyDoesNotFlagRenderBodyVariable(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "src/cli/run.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{{Kind: "added", Text: `fmt.Println(body)`, NewNumber: 1}},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "observe.request.body" {
+			t.Fatalf("unexpected request body finding: %#v", finding)
+		}
+	}
+}
+
+func TestTemplateRuleDoesNotFlagGenericFlagParsing(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "src/cli/args.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{
+				{Kind: "added", Text: `flagArguments := []string{"body"}`, NewNumber: 1},
+				{Kind: "added", Text: `if err := flags.Parse(flagArguments); err != nil {`, NewNumber: 2},
+			},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "template.ssti.dynamic" {
+			t.Fatalf("unexpected template rule finding: %#v", finding)
+		}
+	}
+}

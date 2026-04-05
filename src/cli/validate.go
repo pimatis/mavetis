@@ -8,6 +8,21 @@ import (
 )
 
 func validateReview(spec model.Review) error {
+	if len(spec.Files) != 0 && spec.Staged {
+		return errors.New("@file targets cannot be combined with --staged")
+	}
+	if len(spec.Files) != 0 && spec.Base != "" {
+		return errors.New("@file targets cannot be combined with --base")
+	}
+	if len(spec.Files) != 0 && spec.Head != "" {
+		return errors.New("@file targets cannot be combined with --head")
+	}
+	if spec.WithSuggested && len(spec.Files) == 0 {
+		return errors.New("review option --with-suggested requires file targets")
+	}
+	if spec.StdinTargets && len(spec.Files) == 0 {
+		return errors.New("review option --stdin-targets requires newline-separated paths on stdin")
+	}
 	if spec.Staged && spec.Base != "" {
 		return errors.New("review options --staged and --base cannot be combined")
 	}

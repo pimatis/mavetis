@@ -40,6 +40,9 @@ func Executable(path string) bool {
 	if language == "unknown" {
 		return false
 	}
+	if ReviewArtifact(path) {
+		return false
+	}
 	if language == "config" {
 		return true
 	}
@@ -59,6 +62,9 @@ func Documentation(path string) bool {
 
 func Fixture(path string) bool {
 	normalized := strings.ToLower(filepath.ToSlash(path))
+	if strings.HasSuffix(normalized, "_test.go") {
+		return true
+	}
 	if strings.Contains(normalized, "/testdata/") {
 		return true
 	}
@@ -66,6 +72,23 @@ func Fixture(path string) bool {
 		return true
 	}
 	if strings.Contains(normalized, "/examples/") {
+		return true
+	}
+	return false
+}
+
+func ReviewArtifact(path string) bool {
+	normalized := strings.ToLower(filepath.ToSlash(path))
+	if Documentation(path) {
+		return true
+	}
+	if Fixture(path) {
+		return true
+	}
+	if strings.Contains(normalized, "/src/rule/") || strings.HasPrefix(normalized, "src/rule/") {
+		return true
+	}
+	if strings.Contains(normalized, "/src/analyze/") || strings.HasPrefix(normalized, "src/analyze/") {
 		return true
 	}
 	return false

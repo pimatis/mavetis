@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Pimatis/mavetis/src/analyze"
 	"github.com/Pimatis/mavetis/src/match"
 	"github.com/Pimatis/mavetis/src/model"
 )
@@ -49,6 +50,9 @@ func Review(diff model.Diff, config model.Config, rules []model.Rule) (model.Rep
 	zoneCache := map[string]zoneMatch{}
 	findings := make([]model.Finding, 0)
 	for _, file := range diff.Files {
+		if analyze.ReviewArtifact(file.Path) {
+			continue
+		}
 		if match.Any(config.Ignore, file.Path) {
 			continue
 		}
@@ -77,16 +81,19 @@ func Review(diff model.Diff, config model.Config, rules []model.Rule) (model.Rep
 			}
 		}
 	}
+	fileMode := diff.Meta.Mode == "file"
 	appendFindings(&findings, seen, semanticFindings(diff), config, zoneCache)
 	appendFindings(&findings, seen, goSemanticFindings(diff), config, zoneCache)
 	appendFindings(&findings, seen, nonceFindings(diff), config, zoneCache)
-	appendFindings(&findings, seen, manifestFindings(diff), config, zoneCache)
-	appendFindings(&findings, seen, supplyTrustFindings(diff, config), config, zoneCache)
 	appendFindings(&findings, seen, signatureFindings(diff), config, zoneCache)
-	appendFindings(&findings, seen, downgradeFindings(diff), config, zoneCache)
-	appendFindings(&findings, seen, intentFindings(diff), config, zoneCache)
-	appendFindings(&findings, seen, snapshotFindings(diff, config.Snapshots), config, zoneCache)
-	appendFindings(&findings, seen, crossFindings(diff), config, zoneCache)
+	if !fileMode {
+		appendFindings(&findings, seen, manifestFindings(diff), config, zoneCache)
+		appendFindings(&findings, seen, supplyTrustFindings(diff, config), config, zoneCache)
+		appendFindings(&findings, seen, downgradeFindings(diff), config, zoneCache)
+		appendFindings(&findings, seen, intentFindings(diff), config, zoneCache)
+		appendFindings(&findings, seen, snapshotFindings(diff, config.Snapshots), config, zoneCache)
+		appendFindings(&findings, seen, crossFindings(diff), config, zoneCache)
+	}
 	sortFindings(findings)
 	report.Findings = findings
 	report.Rules = append(report.Rules, syntheticInfosForProfile(config.Profile)...)

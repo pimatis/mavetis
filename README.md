@@ -8,6 +8,7 @@ Mavetis delivers security analysis capabilities through the following core featu
 
 - **Air-Gapped Operation**: Complete offline analysis with zero external network dependencies
 - **Change-Focused Analysis**: Precise security evaluation of staged changes, branch diffs, and merge candidates
+- **File Review Mode**: Direct security review of arbitrary local files without requiring a Git diff context
 - **Comprehensive Detection**: Coverage across secrets management, authentication, authorization, cryptography, injection vulnerabilities, and supply chain security
 - **Regression Prevention**: Detection of removed security controls, validation mechanisms, and policy enforcement points
 - **Policy-Aware Review**: Built-in review profiles and trust zones for risk-weighted enterprise diff analysis
@@ -27,6 +28,8 @@ Delivered capabilities include:
 - **Security Downgrade Detection**: SameSite weakening, cookie and token lifetime growth, bcrypt cost reduction, rate-limit threshold increases, timeout expansion, and MFA weakening
 - **Config Drift Detection**: Debug mode activation, non-production environment fallbacks, wildcard CORS, weakened CSP, legacy TLS configuration, and privileged container settings
 - **Observability Leak Detection**: Request body logging, authorization material leakage, PII in telemetry, raw error serialization, and sensitive tracing attributes
+- **File-Based Security Review**: Scan local files directly with the same built-in and custom rules used for diff review
+- **Bounded Dependency Suggestions**: Suggest nearby local imports and package files for follow-up review without unbounded traversal
 
 ### Policy Layer
 
@@ -137,6 +140,15 @@ mavetis review --staged --path 'src/**' --profile auth --explain
 # Compare backend changes against a base branch
 mavetis review --base main --path 'src/**' --profile backend
 
+# Review local files directly without a Git diff
+mavetis review src/auth/login.go src/api/handler.ts --explain
+
+# Review config or infra files in machine-readable form
+mavetis review @config/nginx.conf --profile backend --format json
+
+# Review local files together with bounded suggested imports
+mavetis review src/scan/load.go --with-suggested
+
 # CI/CD integration with fintech-focused policy output
 mavetis ci --base main --format json --profile fintech
 
@@ -148,7 +160,7 @@ mavetis hooks install
 
 ### Analysis Commands
 
-- `mavetis review` — Analyze code changes with configurable scope, output, and rule profile selection
+- `mavetis review` — Analyze code changes or direct file targets with configurable scope, output, and rule profile selection
 - `mavetis ci` — Optimized analysis for continuous integration environments with profile-aware policy evaluation
 
 ### Git Hook Management
@@ -260,6 +272,29 @@ Mavetis implements comprehensive regression detection by analyzing removed or we
 - Security-intent regressions in validation, sanitization, ownership, MFA, and token functions
 - Repository-specific snapshot regressions for security baselines captured from current code
 
+## File Review Mode
+
+File review reuses the existing engine, rule DSL, masking, policy filtering, and output formats without requiring staged or branch diff data.
+
+Examples:
+
+```bash
+mavetis review src/auth/login.go --explain
+mavetis review src/auth/*.go --severity high
+mavetis review src/api/router.ts @src/middleware/cors.ts --format json
+mavetis review src/scan/load.go --with-suggested
+```
+
+Behavior:
+
+- Scans explicit local files only and rejects traversal outside the repository root
+- Accepts both plain relative paths and `@path` targets so existing shell workflows stay simple
+- Rejects binary targets, directories, device files, and oversized files above the bounded review limit
+- Reuses built-in and custom rules against a synthetic full-file diff representation
+- Emits bounded local dependency suggestions for nearby imports so reviewers can widen coverage intentionally
+- Supports `--with-suggested` to review those bounded suggested files in the same run
+- Keeps the file review path local-only with no outbound network activity
+
 ## Output Formats
 
 Mavetis supports multiple output formats for integration with various toolchains:
@@ -268,7 +303,7 @@ Mavetis supports multiple output formats for integration with various toolchains
 Human-readable output with ANSI color coding for terminal environments. Suitable for developer workflows and manual review processes.
 
 ### Machine-Readable JSON (`json`)
-Structured output format for programmatic processing and custom integrations.
+Structured output format for programmatic processing and custom integrations. File review suggestions are included under `suggestions` when available, and `rules` is reduced to matched rule metadata so zero-finding output stays concise.
 
 ### SARIF (`sarif`)
 Industry-standard Static Analysis Results Interchange Format for integration with security platforms and CI/CD systems.

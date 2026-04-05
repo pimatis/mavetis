@@ -24,6 +24,9 @@ func crossFindings(diff model.Diff) []model.Finding {
 		if !analyze.Executable(file.Path) {
 			continue
 		}
+		if analyze.ReviewArtifact(file.Path) {
+			continue
+		}
 		for _, hunk := range file.Hunks {
 			for _, line := range hunk.Lines {
 				lower := strings.ToLower(line.Text)

@@ -57,7 +57,38 @@ func TextExplain(report model.Report, explain bool) string {
 			builder.WriteString(reasons(finding, tone))
 		}
 	}
+	if len(report.Suggestions) != 0 {
+		builder.WriteString("\n")
+		label := "Suggested"
+		value := fmt.Sprintf("%d additional files to review", len(report.Suggestions))
+		if reviewedSuggestions(report.Suggestions) != 0 {
+			label = "Included"
+			value = fmt.Sprintf("%d additional files reviewed", reviewedSuggestions(report.Suggestions))
+		}
+		builder.WriteString(line(label, value, tone))
+		for _, suggestion := range report.Suggestions {
+			reviewed := ""
+			if suggestion.Reviewed {
+				reviewed = "; reviewed"
+			}
+			builder.WriteString(fmt.Sprintf("  %s %s (%s from %s%s)\n", paint(tone.label, "→", tone), suggestion.Path, suggestion.Reason, suggestion.From, reviewed))
+		}
+		if report.SuggestedCommand != "" {
+			builder.WriteString(line("Run", report.SuggestedCommand, tone))
+		}
+	}
 	return builder.String()
+}
+
+func reviewedSuggestions(suggestions []model.Suggestion) int {
+	count := 0
+	for _, suggestion := range suggestions {
+		if !suggestion.Reviewed {
+			continue
+		}
+		count++
+	}
+	return count
 }
 
 func line(label string, value string, tone palette) string {

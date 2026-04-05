@@ -1,11 +1,21 @@
 package model
 
 type Report struct {
-	Meta     DiffMeta   `json:"meta"`
-	Policy   *Policy    `json:"policy,omitempty"`
-	Summary  Summary    `json:"summary"`
-	Findings []Finding  `json:"findings"`
-	Rules    []RuleInfo `json:"rules"`
+	Meta             DiffMeta     `json:"meta"`
+	Policy           *Policy      `json:"policy,omitempty"`
+	Summary          Summary      `json:"summary"`
+	Findings         []Finding    `json:"findings"`
+	Rules            []RuleInfo   `json:"rules,omitempty"`
+	Suggestions      []Suggestion `json:"suggestions,omitempty"`
+	SuggestedCommand string       `json:"suggestedCommand,omitempty"`
+}
+
+type Suggestion struct {
+	Path     string `json:"path"`
+	From     string `json:"from"`
+	Reason   string `json:"reason"`
+	Depth    int    `json:"depth"`
+	Reviewed bool   `json:"reviewed,omitempty"`
 }
 
 type RuleInfo struct {

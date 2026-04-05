@@ -13,6 +13,9 @@ func goSemanticFindings(diff model.Diff) []model.Finding {
 		if analyze.Language(file.Path) != "go" {
 			continue
 		}
+		if analyze.ReviewArtifact(file.Path) {
+			continue
+		}
 		for _, hunk := range file.Hunks {
 			flows := analyze.GoFlows(join(hunk))
 			for _, flow := range flows {
