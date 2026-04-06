@@ -44,7 +44,10 @@ func Execute(arguments []string) int {
 	if command == "update" {
 		return runUpdate(arguments[1:])
 	}
-	if command == "version" {
+	if command == "shell" {
+		return runShell(arguments[1:])
+	}
+	if command == "version" || command == "-v" {
 		fmt.Printf("%s %s\n", model.Name, model.Version)
 		return 0
 	}

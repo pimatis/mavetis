@@ -208,6 +208,7 @@ func helpMessage() string {
   ci --base main [--path src/**] [--profile fintech]
   hooks install
   hooks uninstall
+  shell init zsh
   rules validate --rules rules.yaml
   rules list [--rules rules.yaml]
   rules show --id rule.id [--rules rules.yaml]
@@ -216,27 +217,6 @@ func helpMessage() string {
   rules snapshot --output snapshots.yaml [--path src/auth/**]
   update [--check]
   version
-
-regression core:
-  - security downgrade detection for cookies, bcrypt, timeouts, rate limits, and MFA
-  - config drift detection for debug mode, CSP, CORS, TLS, and deployable container settings
-  - observability leak detection for request bodies, auth material, PII, raw errors, and traces
-
-policy layer:
-  - rule profiles: auth, fintech, backend, frontend
-  - trust zones from config: zones.critical and zones.restricted
-  - automatic severity uplift and stricter fail-on inside protected paths
-
-boundary enforcement:
-  - built-in permission boundary rules for public, admin, auth, and UI layers
-  - typed custom rule DSL for import, middleware, env, call, config, and path constraints
-
-supply-chain trust:
-  - lifecycle and dependency correlation, registry trust drift, lockfile consistency, and package trust policies
-
-security intent and snapshots:
-  - security intent mismatch detection for renamed or weakened protective functions
-  - repository security snapshots via rules snapshot and snapshot.path config
 
 file review:
   mavetis review src/auth/login.go src/api/handler.ts --explain

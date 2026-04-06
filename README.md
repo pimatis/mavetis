@@ -1,325 +1,140 @@
+<div align="center">
+
 # Mavetis
 
-Mavetis is an enterprise-grade security analysis tool for Git-based development workflows. Designed for organizations requiring rigorous code security review, it performs comprehensive static analysis on code changes with complete network isolation.
+**Enterprise-grade security analysis for Git-based development workflows**
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8.svg)](https://go.dev)
+[![Status](https://img.shields.io/badge/Status-Stable-brightgreen.svg)](#)
+
+Complete static analysis with zero external dependencies, zero network calls, and zero telemetry.
+
+</div>
+
+---
+
+## Contents
+
+[Overview](#overview) · [Installation](#installation) · [Usage](#usage) · [Configuration](#configuration) · [Rules](#rules) · [Detection](#detection) · [Output](#output) · [Hooks](#hooks) · [Updates](#updates) · [Development](#development)
+
+---
+
+<a id="overview"></a>
 ## Overview
 
-Mavetis delivers security analysis capabilities through the following core features:
+Mavetis delivers change-focused security analysis with complete network isolation. Pure Go standard library implementation. No third-party dependencies.
 
-- **Air-Gapped Operation**: Complete offline analysis with zero external network dependencies
-- **Change-Focused Analysis**: Precise security evaluation of staged changes, branch diffs, and merge candidates
-- **File Review Mode**: Direct security review of arbitrary local files without requiring a Git diff context
-- **Comprehensive Detection**: Coverage across secrets management, authentication, authorization, cryptography, injection vulnerabilities, and supply chain security
-- **Regression Prevention**: Detection of removed security controls, validation mechanisms, and policy enforcement points
-- **Policy-Aware Review**: Built-in review profiles and trust zones for risk-weighted enterprise diff analysis
-- **Boundary Enforcement**: Diff-level architectural boundary checks for privileged modules, admin surfaces, and UI/server trust edges
-- **Flexible Rule Engine**: Customizable YAML-based rules with contextual scoping, typed policies, and repository snapshots
-- **Enterprise Integration**: Native JSON and SARIF output formats for seamless CI/CD pipeline integration
-- **Deterministic Execution**: Pure Go standard library implementation ensuring consistent, reproducible results
+**Core Capabilities**
 
-## Delivered Capability Layers
+| Capability | Description |
+|---|---|
+| Air-Gapped Operation | Complete offline analysis with zero external network dependencies |
+| Change-Focused Analysis | Security evaluation of staged changes, branch diffs, and merge candidates |
+| File Review Mode | Direct security review of arbitrary local files without Git diff context |
+| Regression Prevention | Detection of removed security controls and weakened policies |
+| Policy-Aware Review | Built-in review profiles and trust zones for risk-weighted analysis |
+| Boundary Enforcement | Architectural boundary checks for privileged modules and trust edges |
+| Flexible Rule Engine | Customizable YAML-based rules with contextual scoping |
+| Enterprise Integration | Native JSON and SARIF output for CI/CD pipelines |
+| Supply-Chain Trust | Dependency lifecycle correlation and registry trust policies |
+| Security Intent Analysis | Detects security-named code that no longer performs protective logic |
 
-### Regression Core
+---
 
-Mavetis treats security weakening as a first-class signal in Git diffs, not only newly introduced dangerous code.
-
-Delivered capabilities include:
-
-- **Security Downgrade Detection**: SameSite weakening, cookie and token lifetime growth, bcrypt cost reduction, rate-limit threshold increases, timeout expansion, and MFA weakening
-- **Config Drift Detection**: Debug mode activation, non-production environment fallbacks, wildcard CORS, weakened CSP, legacy TLS configuration, and privileged container settings
-- **Observability Leak Detection**: Request body logging, authorization material leakage, PII in telemetry, raw error serialization, and sensitive tracing attributes
-- **File-Based Security Review**: Scan local files directly with the same built-in and custom rules used for diff review
-- **Bounded Dependency Suggestions**: Suggest nearby local imports and package files for follow-up review without unbounded traversal
-
-### Policy Layer
-
-Mavetis can now operate as a policy-aware diff review layer instead of a single global rule set.
-
-Delivered capabilities include:
-
-- **Rule Profiles**: `auth`, `fintech`, `backend`, and `frontend` review modes for different engineering surfaces
-- **Trust Zones**: `zones.critical` and `zones.restricted` path groups that automatically raise severity and tighten blocking thresholds
-- **Policy Metadata in Output**: Text, JSON, and SARIF outputs now include active policy context for downstream review and CI enforcement
-
-### Boundary Enforcement and Typed Rules
-
-Mavetis can enforce architectural trust boundaries directly in changed lines and can express policy beyond regex-only matching.
-
-Delivered capabilities include:
-
-- **Permission Boundary Rules**: Built-in detection for public routes importing internal admin code, UI layers importing auth or security helpers, and public surfaces reaching privileged services
-- **Typed Custom Rule DSL**: `forbiddenImport`, `deletedLineGuard`, `forbiddenEnv`, `requiredMiddleware`, `requiredCall`, `configKeyConstraint`, and `pathBoundary`
-- **Diff-Bounded Evaluation**: Typed policies stay local to changed files and changed hunks, avoiding full repository graph traversal in the review path
-
-### Supply-Chain Trust
-
-Mavetis now treats dependency trust changes as policy events rather than simple package changes.
-
-Delivered capabilities include:
-
-- **Lifecycle and Dependency Correlation**: Alerts when dependency additions and install-time scripts land in the same branch
-- **Registry Trust Drift Detection**: Detects private-to-public registry moves and registries outside the configured trust allowlist
-- **Package Trust Policies**: Supports `supply.allow-packages`, `supply.deny-packages`, and `supply.trusted-registries`
-- **Lockfile Consistency Checks**: Flags manifest changes that land without lockfile review in the same branch
-
-### Security Intent and Repository Snapshots
-
-Mavetis can now detect when security-named code stops behaving like security code and can preserve repository-specific secure baselines.
-
-Delivered capabilities include:
-
-- **Security Intent Mismatch Detection**: Flags security-named functions whose changed logic no longer reflects their declared protective purpose
-- **Repository Security Snapshots**: `rules snapshot` can generate opt-in snapshot baselines and `snapshot.path` can enforce them during review
-- **Diff-Local Baseline Enforcement**: Snapshot checks stay bounded to changed hunks and trigger only when the repository-specific baseline is weakened
-
-## Security Architecture
-
-Mavetis operates under a zero-trust security model with the following guarantees:
-
-- No third-party dependencies or external modules
-- Zero cloud service dependencies
-- No authentication or account requirements
-- No telemetry or usage data collection
-- No artificial intelligence or machine learning components
-- Complete network isolation during analysis
-- Automatic redaction of sensitive data in findings
-- Cryptographically verified installation packages
-
+<a id="installation"></a>
 ## Installation
 
-### macOS and Linux
+**macOS and Linux**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pimatis/mavetis/main/install.sh | sh
 ```
 
-### Windows PowerShell
+**Windows PowerShell**
 
 ```powershell
 iwr https://raw.githubusercontent.com/pimatis/mavetis/main/install.ps1 -UseBasicParsing | iex
 ```
 
-### Go Install
+**Go Install**
 
 ```bash
 go install github.com/pimatis/mavetis@latest
 ```
 
-### Maintenance
+**Removal**
 
 ```bash
-mavetis update          # Update to latest version
-mavetis update --check  # Check for available updates
-```
-
-### Removal
-
-macOS and Linux:
-
-```bash
+# macOS / Linux
 sudo rm -f /usr/local/bin/mavetis
 rm -f "$HOME/.local/bin/mavetis"
-```
 
-Windows PowerShell:
-
-```powershell
+# Windows
 Remove-Item "$HOME\AppData\Local\mavetis\bin\mavetis.exe" -Force
 ```
 
-Remove the binary from the location that was used during installation.
+---
 
+<a id="usage"></a>
 ## Usage
 
-### Basic Operations
-
 ```bash
-# Review staged authentication changes with profile-aware explanations
+# Review staged auth changes with profile-aware output
 mavetis review --staged --path 'src/**' --profile auth --explain
 
-# Compare backend changes against a base branch
+# Compare backend changes against base branch
 mavetis review --base main --path 'src/**' --profile backend
 
-# Review local files directly without a Git diff
+# Review local files directly (no Git diff required)
 mavetis review src/auth/login.go src/api/handler.ts --explain
 
-# Review config or infra files in machine-readable form
-mavetis review @config/nginx.conf --profile backend --format json
-
-# Review local files together with bounded suggested imports
-mavetis review src/scan/load.go --with-suggested
-
-# CI/CD integration with fintech-focused policy output
+# CI/CD integration with JSON output
 mavetis ci --base main --format json --profile fintech
 
 # Install Git hooks for automated scanning
 mavetis hooks install
 ```
 
-## Command Reference
+### Command Reference
 
-### Analysis Commands
+| Command | Description |
+|---|---|
+| `mavetis review` | Analyze code changes or file targets with configurable scope and rule profile |
+| `mavetis ci` | Optimized analysis for CI/CD with profile-aware policy evaluation |
+| `mavetis hooks install` | Configure pre-commit and pre-push scanning |
+| `mavetis hooks uninstall` | Remove configured Git hooks |
+| `mavetis rules validate` | Validate custom rule definitions |
+| `mavetis rules list` | Display available security rules |
+| `mavetis rules show` | Display detailed rule information |
+| `mavetis rules test` | Test rules against sample diffs |
+| `mavetis rules matrix` | Generate compliance coverage matrix |
+| `mavetis rules snapshot` | Generate repository security snapshots |
+| `mavetis update` | Self-update to latest version |
+| `mavetis version` | Display version information |
 
-- `mavetis review` — Analyze code changes or direct file targets with configurable scope, output, and rule profile selection
-- `mavetis ci` — Optimized analysis for continuous integration environments with profile-aware policy evaluation
+### File Review Mode
 
-### Git Hook Management
-
-- `mavetis hooks install` — Configure automated pre-commit and pre-push scanning
-- `mavetis hooks uninstall` — Remove configured Git hooks
-
-### Rule Management
-
-- `mavetis rules validate` — Validate custom rule definitions
-- `mavetis rules list` — Display available security rules
-- `mavetis rules show` — Display detailed rule information
-- `mavetis rules test` — Test rules against sample diffs
-- `mavetis rules matrix` — Generate compliance coverage matrix
-- `mavetis rules snapshot` — Generate repository security snapshots from existing security-sensitive code anchors
-
-### System Commands
-
-- `mavetis update` — Self-update functionality
-- `mavetis version` — Display version information
-
-## Detection Capabilities
-
-### Secrets Management and Cryptography
-
-Mavetis identifies exposure of sensitive credentials and cryptographic weaknesses:
-
-- Cloud provider credentials (AWS, Stripe, Supabase)
-- Configuration file secrets (dotenv, JWT)
-- Private key exposure and high-entropy secret patterns
-- Cryptographic implementation flaws (weak randomness, weak hashing, weak ciphers)
-- IV/nonce misuse and reuse patterns
-- Verification bypass mechanisms and key confusion attacks
-- Insecure algorithm selection and remote key retrieval
-
-### Access Control and Session Management
-
-Comprehensive analysis of authentication and authorization mechanisms:
-
-- Authentication bypass vulnerabilities
-- Deleted or disabled authentication middleware
-- Insecure token storage implementations
-- Session fixation and invalidation issues
-- Timeout control removal
-- Refresh token rotation failures
-- Ownership verification deletion
-- Authorization scope filter removal
-- Operation-level permission regressions
-- Insecure Direct Object Reference (IDOR) patterns
-- JWT security flaws (decode-without-verify, missing binding, incomplete validation)
-- OAuth implementation weaknesses (state, PKCE, nonce, replay attacks)
-
-### Injection and Input Validation
-
-Detection of injection vulnerabilities and unsafe data handling:
-
-- Server-Side Request Forgery (SSRF)
-- SQL injection
-- Command injection
-- Cross-Site Scripting (XSS)
-- Unsafe deserialization
-- Path traversal and Zip Slip vulnerabilities
-- File upload validation gaps
-- Cross-Origin Resource Sharing (CORS) misconfigurations
-- TLS validation disablement
-- Sensitive data logging
-- Stack trace information disclosure
-- Dynamic code evaluation (eval)
-- Server-Side Template Injection (SSTI)
-- Data flow analysis from request sources to sensitive sinks
-
-### Supply Chain Security
-
-Analysis of dependency and build pipeline security:
-
-- Remote and git-based dependencies
-- Version pinning violations and floating versions
-- Public registry drift detection
-- Remote replacement injections
-- Typosquatting attack patterns
-- Lockfile integrity violations
-- Integrity hash removal
-- Install-time script execution
-- Direct shell download execution
-- Mutable GitHub Action references
-- Overly permissive workflow permissions
-- `pull_request_target` misconfigurations
-- Dependency and lifecycle-script correlation
-- Registry trust allowlist enforcement
-- Package allowlist and denylist enforcement
-- Manifest-without-lockfile drift detection
-
-## Regression Detection
-
-Mavetis implements comprehensive regression detection by analyzing removed or weakened security controls with the same priority as newly introduced vulnerabilities. The system identifies:
-
-- Deleted authentication and authorization middleware
-- Removed role-based access control checks
-- Eliminated ownership verification mechanisms
-- Deleted input validation and sanitization routines
-- Removed timeout and rate limiting controls
-- Disabled token single-use validations
-- Deleted file upload validation
-- Removed scope and permission filters
-- SameSite policy weakening and cookie lifetime expansion
-- bcrypt cost downgrades and MFA requirement weakening
-- Config drift that disables production-grade browser, transport, or deployment protections
-- Architectural boundary violations across public, admin, UI, and privileged layers
-- Security-intent regressions in validation, sanitization, ownership, MFA, and token functions
-- Repository-specific snapshot regressions for security baselines captured from current code
-
-## File Review Mode
-
-File review reuses the existing engine, rule DSL, masking, policy filtering, and output formats without requiring staged or branch diff data.
-
-Examples:
+Scan local files directly using the same engine, rule DSL, and output formats without requiring staged or branch diff data.
 
 ```bash
 mavetis review src/auth/login.go --explain
 mavetis review src/auth/*.go --severity high
-mavetis review src/api/router.ts @src/middleware/cors.ts --format json
 mavetis review src/scan/load.go --with-suggested
+mavetis review @config/nginx.conf --profile backend --format json
 ```
 
-Behavior:
+- Accepts plain relative paths and `@path` targets
+- Rejects binary targets, directories, and oversized files
+- Emits bounded local dependency suggestions for nearby imports
+- `--with-suggested` reviews those suggested files in the same run
 
-- Scans explicit local files only and rejects traversal outside the repository root
-- Accepts both plain relative paths and `@path` targets so existing shell workflows stay simple
-- Rejects binary targets, directories, device files, and oversized files above the bounded review limit
-- Reuses built-in and custom rules against a synthetic full-file diff representation
-- Emits bounded local dependency suggestions for nearby imports so reviewers can widen coverage intentionally
-- Supports `--with-suggested` to review those bounded suggested files in the same run
-- Keeps the file review path local-only with no outbound network activity
+---
 
-## Output Formats
-
-Mavetis supports multiple output formats for integration with various toolchains:
-
-### Interactive Text (`text`)
-Human-readable output with ANSI color coding for terminal environments. Suitable for developer workflows and manual review processes.
-
-### Machine-Readable JSON (`json`)
-Structured output format for programmatic processing and custom integrations. File review suggestions are included under `suggestions` when available, and `rules` is reduced to matched rule metadata so zero-finding output stays concise.
-
-### SARIF (`sarif`)
-Industry-standard Static Analysis Results Interchange Format for integration with security platforms and CI/CD systems.
-
-### Environment Controls
-
-```bash
-NO_COLOR=1 mavetis review --staged    # Disable color output
-FORCE_COLOR=1 mavetis review --staged # Force color output
-```
-
+<a id="configuration"></a>
 ## Configuration
 
-Mavetis loads configuration from `.mavetis.yaml` or `.mavetis.yml` in the current working directory.
-
-### Base Configuration
+Mavetis loads configuration from `.mavetis.yaml` or `.mavetis.yml` in the working directory.
 
 ```yaml
 severity: low
@@ -358,40 +173,37 @@ zones:
     - src/backoffice/**
 ```
 
-### Profiles and Trust Zones
+### Profiles
 
-Profiles change which built-in rule families are active during review:
+| Profile | Focus |
+|---|---|
+| `auth` | Authentication, authorization, session, token, crypto, and related telemetry |
+| `fintech` | Full default policy surface for high-assurance review workflows |
+| `backend` | Server-side security, supply-chain, config, network, and abuse-prevention |
+| `frontend` | Browser-facing auth, session, XSS, CORS, privacy, and client config |
 
-- `auth` — authentication, authorization, session, token, crypto, and related auth telemetry coverage
-- `fintech` — full default policy surface for high-assurance review workflows
-- `backend` — server-side security, supply-chain, config, network, and abuse-prevention coverage
-- `frontend` — browser-facing auth, session, XSS, CORS, privacy, telemetry, and client config coverage
+### Trust Zones
 
-Trust zones raise enforcement in sensitive directories:
+| Zone | Behavior |
+|---|---|
+| `zones.critical` | Raises findings by two severity levels; blocks at `fail-on=low` |
+| `zones.restricted` | Raises findings by one severity level; blocks at `fail-on=medium` |
 
-- `zones.critical` — raises matched findings by two severity levels up to `critical` and tightens blocking to `fail-on=low`
-- `zones.restricted` — raises matched findings by one severity level and tightens blocking to `fail-on=medium`
+---
 
-Example:
-
-```bash
-mavetis review --staged --profile auth --config .mavetis.yaml
-```
-
-Output formats include the active policy, matched zone, base severity, and effective fail threshold so CI systems can distinguish policy escalation from the original detector severity.
+<a id="rules"></a>
+## Rules
 
 ### Custom Security Rules
 
-Organizations can define organization-specific security policies through custom YAML rules.
-
-Regex-based example:
+Define organization-specific policies through YAML rules:
 
 ```yaml
 rules:
   - id: company.fetch.untrusted
     title: Untrusted Fetch Operation
     message: Request-controlled URL reached a sensitive fetch sink.
-    remediation: Validate and allowlist outbound destinations before processing the request.
+    remediation: Validate and allowlist outbound destinations before processing.
     category: inject
     severity: high
     confidence: medium
@@ -408,7 +220,7 @@ rules:
       - OWASP-ASVS-V5.3
 ```
 
-Typed policy examples:
+### Typed Policies
 
 ```yaml
 rules:
@@ -419,27 +231,11 @@ rules:
     remediation: Move the logic behind a reviewed server boundary.
     category: boundary
     severity: high
-    confidence: high
     target: added
     paths:
       - src/ui/**
-      - src/components/**
     imports:
       - '(?i)(^|/)(auth|security|internal)(/|$)'
-
-  - id: company.routes.require-auth
-    type: requiredMiddleware
-    title: Protected routes must include auth middleware
-    message: A route was added without the required auth middleware.
-    remediation: Attach the approved middleware before exposing the route.
-    category: boundary
-    severity: critical
-    confidence: high
-    target: added
-    require:
-      - 'router\.(get|post|put|delete)'
-    middleware:
-      - 'requireAuth'
 
   - id: company.prod-mode
     type: configKeyConstraint
@@ -448,105 +244,150 @@ rules:
     remediation: Keep deployable runtime configuration pinned to production.
     category: config
     severity: high
-    confidence: high
     target: added
     key: NODE_ENV
     allowed-values:
       - production
 ```
 
-### Rule Matchers and Typed Policy Surface
+### Rule Matchers
 
-Custom rules support both regex matchers and typed policy primitives:
+| Matcher | Description |
+|---|---|
+| `require` | Mandatory pattern presence |
+| `any` | Alternative pattern matching |
+| `near` | Contextual proximity matching |
+| `absent` | Negative pattern matching |
+| `forbiddenImport` | Block imports from forbidden modules |
+| `deletedLineGuard` | Treat deleted security guard lines as violations |
+| `forbiddenEnv` | Forbid risky environment keys |
+| `requiredMiddleware` | Enforce required middleware on routes |
+| `requiredCall` | Enforce critical side-effect calls |
+| `configKeyConstraint` | Constrain config keys by allowed values or ranges |
+| `pathBoundary` | Express source-to-target trust boundaries |
 
-- `require` — Mandatory pattern presence
-- `any` — Alternative pattern matching
-- `near` — Contextual proximity matching
-- `absent` — Negative pattern matching
-- `forbiddenImport` — Block imports from forbidden modules or trust zones
-- `deletedLineGuard` — Treat deleted security guard lines as policy violations
-- `forbiddenEnv` — Forbid risky environment keys and values
-- `requiredMiddleware` — Enforce required middleware around route additions
-- `requiredCall` — Enforce critical side-effect calls such as audit logging or authorization helpers
-- `configKeyConstraint` — Constrain deployable config keys by allowed values, denied values, pattern, or numeric ranges
-- `pathBoundary` — Express source-path to target-path trust boundaries directly
-- Aliases: `forbidden`, `protected`, `required`, `context`, `mitigate`
-- Path scoping with `paths`, `from-paths`, and `ignore`
-- Compliance matrix generation via `mavetis rules matrix`
+### Repository Snapshots
 
-All regular expressions are compiled during initialization with immediate validation feedback.
-
-### Repository Security Snapshots
-
-Generate repository-specific security baselines from the current codebase:
+Generate and enforce repository-specific security baselines:
 
 ```bash
 mavetis rules snapshot --output .mavetis-snapshots.yaml --path 'src/auth/**'
 ```
 
-Then enable snapshot enforcement in config:
+Enable in configuration:
 
 ```yaml
 snapshot:
   path: .mavetis-snapshots.yaml
 ```
 
-Snapshots are opt-in, local-only, and enforced only when a changed hunk weakens the captured baseline behavior.
+---
 
-## Git Hook Integration
+<a id="detection"></a>
+## Detection
 
-Automated security scanning can be integrated into Git workflows:
+### Secrets and Cryptography
+
+- Cloud provider credentials (AWS, Stripe, Supabase)
+- Configuration file secrets (dotenv, JWT)
+- Private key exposure and high-entropy secret patterns
+- Weak randomness, hashing, and ciphers
+- IV/nonce misuse and key confusion attacks
+
+### Access Control and Sessions
+
+- Authentication bypass and middleware removal
+- Insecure token storage and session fixation
+- Token rotation failures and scope filter removal
+- IDOR patterns and operation-level permission regressions
+- JWT security flaws (decode-without-verify, missing binding)
+- OAuth weaknesses (state, PKCE, nonce, replay attacks)
+
+### Injection and Input Validation
+
+- SSRF, SQL injection, command injection, XSS
+- Unsafe deserialization and path traversal
+- File upload validation gaps and CORS misconfiguration
+- TLS validation disablement and stack trace disclosure
+- Dynamic code evaluation (eval) and SSTI
+
+### Supply Chain
+
+- Remote and git-based dependencies
+- Version pinning violations and typosquatting
+- Lockfile integrity and integrity hash removal
+- Install-time script execution and shell downloads
+- Mutable GitHub Action references
+- Registry trust enforcement
+
+### Regression Detection
+
+- Deleted authentication and authorization middleware
+- Removed access control checks and validation routines
+- Timeout and rate limiting removal
+- SameSite weakening, cookie lifetime expansion
+- bcrypt cost downgrades and MFA weakening
+- Architectural boundary violations
+- Snapshot regressions against captured baselines
+
+---
+
+<a id="output"></a>
+## Output
+
+| Format | Use Case |
+|---|---|
+| `text` | Human-readable with ANSI colors for terminal workflows |
+| `json` | Structured output for programmatic processing and integrations |
+| `sarif` | Industry-standard format for security platforms and CI/CD |
+
+**Environment Controls**
+
+```bash
+NO_COLOR=1 mavetis review --staged    # Disable color output
+FORCE_COLOR=1 mavetis review --staged # Force color output
+```
+
+---
+
+<a id="hooks"></a>
+## Hooks
 
 ```bash
 mavetis hooks install
 ```
 
-This configures:
+Configures:
 
 - **Pre-commit**: `mavetis review --staged --fail-on high`
 - **Pre-push**: `mavetis review --base <default-branch> --fail-on high`
 
-Existing hook configurations are automatically backed up (`.bak`) prior to modification.
+Existing hooks are automatically backed up (`.bak`) prior to modification.
 
-## Automated Updates
+---
 
-Mavetis includes secure self-update capabilities:
+<a id="updates"></a>
+## Updates
 
 ```bash
 mavetis update          # Download and install latest release
 mavetis update --check  # Check for available updates
 ```
 
-The update process:
+The update process queries GitHub releases, verifies cryptographic checksums, downloads the platform-appropriate archive, and performs atomic binary replacement.
 
-1. Queries GitHub releases for the latest version
-2. Verifies cryptographic checksums
-3. Downloads platform-appropriate archive
-4. Performs atomic binary replacement
+---
 
-**Platform-Specific Behavior:**
-
-- **macOS/Linux**: Attempts direct replacement; escalates via `sudo` when directory permissions require elevation
-- **Windows**: Schedules replacement post-process exit; may require elevated terminal for protected directories
-
+<a id="development"></a>
 ## Development
 
-### Building from Source
-
-Mavetis builds from the repository root entrypoint.
-
 ```bash
-go build -o mavetis .
+go build -o mavetis .     # Build from source
+go test ./...             # Run tests
 ```
 
-### Running Tests
-
-```bash
-go test ./...
-```
+---
 
 ## License
 
-This project is licensed under the Apache License 2.0.
-
-Copyright 2026 Pimatis.
+Apache License 2.0 · Copyright 2026 Pimatis

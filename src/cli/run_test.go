@@ -46,6 +46,18 @@ func TestExecuteDispatchesUpdate(t *testing.T) {
 	}
 }
 
+func TestExecuteDispatchesShell(t *testing.T) {
+	if code := Execute([]string{"shell", "init", "zsh"}); code != 0 {
+		t.Fatalf("expected zero exit code for shell init, got %d", code)
+	}
+}
+
+func TestExecuteVersionShortFlagReturnsZero(t *testing.T) {
+	if code := Execute([]string{"-v"}); code != 0 {
+		t.Fatalf("expected zero exit code for short version flag, got %d", code)
+	}
+}
+
 func TestBlockedUsesEffectiveFailOnWhenZonePolicyApplies(t *testing.T) {
 	report := model.Report{Findings: []model.Finding{{Severity: "low", EffectiveFailOn: "low"}}}
 	if !blocked(report, "critical") {
