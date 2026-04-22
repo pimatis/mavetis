@@ -11,8 +11,13 @@ type Config struct {
 	Zones     Zones
 	Supply    Supply
 	Snapshot  SnapshotConfig
+	Baseline  BaselineConfig
 	Rules     []Rule
 	Snapshots []Snapshot
+}
+
+type BaselineConfig struct {
+	Path string
 }
 
 type Allow struct {
@@ -67,5 +72,6 @@ type Review struct {
 	Staged        bool
 	WithSuggested bool
 	StdinTargets  bool
+	BaselinePath  string
 	Files         []string
 }

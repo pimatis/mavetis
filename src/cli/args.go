@@ -30,6 +30,7 @@ func parseReview(arguments []string, ci bool) (model.Review, error) {
 	flags.StringVar(&spec.ConfigPath, "config", "", "Config path")
 	flags.StringVar(&spec.RulesPath, "rules", "", "Custom rules path")
 	flags.StringVar(&spec.Path, "path", "", "Limit review to a path glob")
+	flags.StringVar(&spec.BaselinePath, "baseline", "", "Baseline file path")
 	flags.BoolVar(&spec.Explain, "explain", false, "Include finding reasons in text output")
 	flags.BoolVar(&spec.WithSuggested, "with-suggested", false, "Review bounded suggested local dependencies together with the requested files")
 	flags.BoolVar(&spec.WithSuggested, "follow-imports", false, "Review bounded suggested local dependencies together with the requested files")
@@ -118,6 +119,7 @@ func splitReviewArguments(arguments []string) ([]string, []string, error) {
 		"--config":   {},
 		"--rules":    {},
 		"--path":     {},
+		"--baseline": {},
 	}
 	boolFlags := map[string]struct{}{
 		"--staged":         {},
@@ -206,6 +208,8 @@ func helpMessage() string {
   review --base main [--path src/**] [--profile backend]
   review src/file.go [--with-suggested] [--format json]
   ci --base main [--path src/**] [--profile fintech]
+  init [--default] [--force]
+  baseline --create [--output .mavetis-baseline.yaml] [--base main]
   hooks install
   hooks uninstall
   shell init zsh
@@ -231,6 +235,9 @@ examples:
   mavetis review --base main --path 'src/**' --profile backend
   mavetis review src/scan/load.go --with-suggested
   mavetis ci --base main --format json --profile fintech
+  mavetis init
+  mavetis init --force
+  mavetis baseline --create --base main
   mavetis rules validate --rules rules.yaml
   mavetis rules snapshot --output .mavetis-snapshots.yaml --path 'src/auth/**'
   mavetis update --check

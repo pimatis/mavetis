@@ -119,4 +119,11 @@ func decodeConfig(mapped map[string]any, config *model.Config) {
 			config.Zones.Restricted = yaml.Strings(zonesMap["restricted"])
 		}
 	}
+	baseline, ok := mapped["baseline"]
+	if ok {
+		baselineMap, err := yaml.Map(baseline)
+		if err == nil {
+			config.Baseline.Path, _ = yaml.String(baselineMap["path"])
+		}
+	}
 }

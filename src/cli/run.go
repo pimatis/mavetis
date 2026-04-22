@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Pimatis/mavetis/src/baseline"
 	"github.com/Pimatis/mavetis/src/config"
 	"github.com/Pimatis/mavetis/src/diff"
 	"github.com/Pimatis/mavetis/src/engine"
@@ -47,6 +48,12 @@ func Execute(arguments []string) int {
 	if command == "shell" {
 		return runShell(arguments[1:])
 	}
+	if command == "init" {
+		return runInit(arguments[1:])
+	}
+	if command == "baseline" {
+		return runBaseline(arguments[1:])
+	}
 	if command == "version" || command == "-v" {
 		fmt.Printf("%s %s\n", model.Name, model.Version)
 		return 0
@@ -56,38 +63,15 @@ func Execute(arguments []string) int {
 }
 
 func runReview(arguments []string, ci bool) int {
-	spec, err := parseReview(arguments, ci)
+	spec, cfg, rules, err := prepareReview(arguments, ci)
 	if err != nil {
 		return fail(err)
 	}
-	cfg, err := config.Load(spec.ConfigPath)
+	report, err := buildReport(spec, cfg, rules)
 	if err != nil {
 		return fail(err)
 	}
-	merge(&cfg, spec)
-	rules, err := loadAllRules(cfg, spec.RulesPath)
-	if err != nil {
-		return fail(err)
-	}
-	if len(spec.Files) != 0 {
-		return runFileReview(spec, cfg, rules)
-	}
-	raw, meta, err := git.Review(spec)
-	if err != nil {
-		return fail(err)
-	}
-	parsed, err := diff.Parse(raw, meta)
-	if err != nil {
-		return fail(err)
-	}
-	parsed = diff.Filter(parsed, spec.Path)
-	report, err := engine.Review(parsed, cfg, rules)
-	if err != nil {
-		return fail(err)
-	}
-	if spec.Path != "" {
-		report.Meta.Mode = meta.Mode + ":" + spec.Path
-	}
+	report = applyBaseline(report, cfg, spec)
 	if err := render(report, cfg.Output, spec.Explain); err != nil {
 		return fail(err)
 	}
@@ -97,14 +81,54 @@ func runReview(arguments []string, ci bool) int {
 	return 0
 }
 
-func runFileReview(spec model.Review, cfg model.Config, rules []model.Rule) int {
+func prepareReview(arguments []string, ci bool) (model.Review, model.Config, []model.Rule, error) {
+	spec, err := parseReview(arguments, ci)
+	if err != nil {
+		return model.Review{}, model.Config{}, nil, err
+	}
+	cfg, err := config.Load(spec.ConfigPath)
+	if err != nil {
+		return model.Review{}, model.Config{}, nil, err
+	}
+	merge(&cfg, spec)
+	rules, err := loadAllRules(cfg, spec.RulesPath)
+	if err != nil {
+		return model.Review{}, model.Config{}, nil, err
+	}
+	return spec, cfg, rules, nil
+}
+
+func buildReport(spec model.Review, cfg model.Config, rules []model.Rule) (model.Report, error) {
+	if len(spec.Files) != 0 {
+		return buildFileReport(spec, cfg, rules)
+	}
+	raw, meta, err := git.Review(spec)
+	if err != nil {
+		return model.Report{}, err
+	}
+	parsed, err := diff.Parse(raw, meta)
+	if err != nil {
+		return model.Report{}, err
+	}
+	parsed = diff.Filter(parsed, spec.Path)
+	report, err := engine.Review(parsed, cfg, rules)
+	if err != nil {
+		return model.Report{}, err
+	}
+	if spec.Path != "" {
+		report.Meta.Mode = meta.Mode + ":" + spec.Path
+	}
+	return report, nil
+}
+
+func buildFileReport(spec model.Review, cfg model.Config, rules []model.Rule) (model.Report, error) {
 	root, err := scan.Root()
 	if err != nil {
-		return fail(err)
+		return model.Report{}, err
 	}
 	files, err := scan.LoadFiles(root, spec.Files)
 	if err != nil {
-		return fail(err)
+		return model.Report{}, err
 	}
 	files = filterScannedFiles(files, spec.Path)
 	reviewFiles := append([]scan.ScannedFile{}, files...)
@@ -112,7 +136,7 @@ func runFileReview(spec model.Review, cfg model.Config, rules []model.Rule) int 
 	if spec.WithSuggested {
 		discovered, additions, discoverErr := resolve.Discover(root, files, resolve.DefaultLimits())
 		if discoverErr != nil {
-			return fail(discoverErr)
+			return model.Report{}, discoverErr
 		}
 		reviewFiles = appendUniqueFiles(reviewFiles, discovered)
 		suggestions = markReviewedSuggestions(additions)
@@ -120,14 +144,14 @@ func runFileReview(spec model.Review, cfg model.Config, rules []model.Rule) int 
 	if !spec.WithSuggested {
 		additions, suggestErr := resolve.Suggest(root, files, resolve.DefaultLimits())
 		if suggestErr != nil {
-			return fail(suggestErr)
+			return model.Report{}, suggestErr
 		}
 		suggestions = additions
 	}
 	parsed := scan.FromFiles(reviewFiles)
 	report, err := engine.Review(parsed, cfg, rules)
 	if err != nil {
-		return fail(err)
+		return model.Report{}, err
 	}
 	report.Meta.Mode = "file"
 	if spec.Path != "" {
@@ -137,13 +161,22 @@ func runFileReview(spec model.Review, cfg model.Config, rules []model.Rule) int 
 	if len(suggestions) != 0 && !spec.WithSuggested {
 		report.SuggestedCommand = suggestedCommand(spec)
 	}
-	if err := render(report, cfg.Output, spec.Explain); err != nil {
-		return fail(err)
+	return report, nil
+}
+
+func applyBaseline(report model.Report, cfg model.Config, spec model.Review) model.Report {
+	path := spec.BaselinePath
+	if path == "" {
+		path = cfg.Baseline.Path
 	}
-	if blocked(report, cfg.FailOn) {
-		return 1
+	if path == "" {
+		return report
 	}
-	return 0
+	bl, err := baseline.Load(path)
+	if err != nil {
+		return report
+	}
+	return baseline.Filter(report, bl)
 }
 
 func filterScannedFiles(files []scan.ScannedFile, pattern string) []scan.ScannedFile {

@@ -16,7 +16,7 @@ Complete static analysis with zero external dependencies, zero network calls, an
 
 ## Contents
 
-[Overview](#overview) · [Installation](#installation) · [Usage](#usage) · [Configuration](#configuration) · [Rules](#rules) · [Detection](#detection) · [Output](#output) · [Hooks](#hooks) · [Updates](#updates) · [Development](#development)
+[Overview](#overview) · [Installation](#installation) · [Usage](#usage) · [Configuration](#configuration) · [Rules](#rules) · [Baseline](#baseline) · [Detection](#detection) · [Output](#output) · [Hooks](#hooks) · [Updates](#updates) · [Development](#development)
 
 ---
 
@@ -92,6 +92,12 @@ mavetis review src/auth/login.go src/api/handler.ts --explain
 # CI/CD integration with JSON output
 mavetis ci --base main --format json --profile fintech
 
+# Initialize project configuration interactively
+mavetis init
+
+# Create a baseline from current findings to suppress known issues
+mavetis baseline --create --base main
+
 # Install Git hooks for automated scanning
 mavetis hooks install
 ```
@@ -102,6 +108,8 @@ mavetis hooks install
 |---|---|
 | `mavetis review` | Analyze code changes or file targets with configurable scope and rule profile |
 | `mavetis ci` | Optimized analysis for CI/CD with profile-aware policy evaluation |
+| `mavetis init` | Initialize project configuration with interactive or default `.mavetis.yaml` |
+| `mavetis baseline --create` | Capture current findings as a baseline to suppress known issues |
 | `mavetis hooks install` | Configure pre-commit and pre-push scanning |
 | `mavetis hooks uninstall` | Remove configured Git hooks |
 | `mavetis rules validate` | Validate custom rule definitions |
@@ -163,6 +171,8 @@ supply:
     - registry.company.local
 snapshot:
   path: .mavetis-snapshots.yaml
+baseline:
+  path: .mavetis-baseline.yaml
 zones:
   critical:
     - src/auth/**
@@ -279,6 +289,57 @@ Enable in configuration:
 ```yaml
 snapshot:
   path: .mavetis-snapshots.yaml
+```
+
+---
+
+<a id="baseline"></a>
+## Baseline / Suppressions
+
+Legacy codebases often contain a large number of historical findings that cannot be addressed immediately. Without a baseline, every scan produces the same noise and the tool becomes unusable in practice.
+
+Mavetis supports baselines so teams can record known findings and focus only on newly introduced issues.
+
+### Creating a Baseline
+
+```bash
+mavetis baseline --create --base main
+mavetis baseline --create --output .mavetis-baseline.yaml --base main
+```
+
+This runs a full review against the specified base, captures all findings, and writes them to `.mavetis-baseline.yaml`. The baseline file is automatically added to `.gitignore`.
+
+### Using a Baseline
+
+Pass the baseline file during review to suppress known findings:
+
+```bash
+mavetis review --base main --baseline .mavetis-baseline.yaml
+mavetis ci --base main --baseline .mavetis-baseline.yaml
+```
+
+You can also set the baseline path in `.mavetis.yaml`:
+
+```yaml
+baseline:
+  path: .mavetis-baseline.yaml
+```
+
+When a baseline is configured, only findings not present in the baseline are reported. This makes CI integration practical for teams working with existing code.
+
+### Baseline File Format
+
+```yaml
+# Mavetis baseline
+# Known findings suppressed in subsequent reviews
+
+baseline:
+  - rule: inject.sql.raw
+    path: src/api/handler.go
+    line: 45
+  - rule: secret.generic
+    path: config/.env
+    line: 3
 ```
 
 ---
