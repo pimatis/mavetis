@@ -50,7 +50,7 @@ func TestRunAlreadyUpToDate(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	out, _ := io.ReadAll(r)
-	expected := "latest version of mavetis"
+	expected := "already at its glorious latest version"
 	if !strings.Contains(string(out), expected) {
 		t.Fatalf("expected output to contain %q, got %q", expected, string(out))
 	}
