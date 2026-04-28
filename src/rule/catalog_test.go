@@ -36,6 +36,22 @@ func TestBuiltinsExposeExpandedFamilies(t *testing.T) {
 		"observe.request.body",
 		"auth.mfa.deleted",
 		"boundary.ui.auth",
+		"auth.password.plaintext",
+		"auth.password.weakhash",
+		"crypto.rsa.keysize",
+		"inject.redos",
+		"inject.xml.xxee",
+		"inject.openredirect",
+		"inject.lfi",
+		"inject.rfi",
+		"file.download.traversal",
+		"config.hsts.missing",
+		"config.xframe.missing",
+		"config.xcontenttype.missing",
+		"logic.mass.assignment",
+		"logic.price.tampering",
+		"secret.pii.exposed",
+		"observe.healthdata",
 	}
 	for _, id := range expected {
 		if !contains(rules, id) {

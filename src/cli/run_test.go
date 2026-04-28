@@ -58,6 +58,12 @@ func TestExecuteVersionShortFlagReturnsZero(t *testing.T) {
 	}
 }
 
+func TestExecuteVersionLongFlagReturnsZero(t *testing.T) {
+	if code := Execute([]string{"--version"}); code != 0 {
+		t.Fatalf("expected zero exit code for long version flag, got %d", code)
+	}
+}
+
 func TestBlockedUsesEffectiveFailOnWhenZonePolicyApplies(t *testing.T) {
 	report := model.Report{Findings: []model.Finding{{Severity: "low", EffectiveFailOn: "low"}}}
 	if !blocked(report, "critical") {

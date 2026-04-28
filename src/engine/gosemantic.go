@@ -32,6 +32,9 @@ func goSemanticFindings(diff model.Diff) []model.Finding {
 					findings = append(findings, syntheticFinding("semantic.go.template", "Go AST found tainted flow into template construction", "template", "high", file.Path, hunk, "Go AST flow analysis found request-derived data reaching template construction inside the diff hunk.", "Keep template definitions static and avoid constructing templates from user-controlled input.", "Go AST tracked request-derived values through assignments", "template construction consumed the tainted value"))
 				}
 			}
+			if analyze.GoUnsafePointer(join(hunk)) {
+				findings = append(findings, syntheticFinding("semantic.go.unsafe", "Go AST found unsafe.Pointer usage", "memory", "high", file.Path, hunk, "Go AST detected unsafe.Pointer inside the diff hunk, which can break type safety and lead to memory corruption.", "Avoid unsafe.Pointer unless performance is critical and the cast is fully reviewed.", "Go AST confirmed an unsafe.Pointer call or conversion in the hunk"))
+			}
 		}
 	}
 	return findings

@@ -204,10 +204,10 @@ func defaultBase(value string) string {
 
 func helpMessage() string {
 	return `mavetis commands:
-  review --staged [--path src/**] [--profile auth] [--explain]
-  review --base main [--path src/**] [--profile backend]
+  review --staged [--path src/**] [--profile auth] [--explain] [--baseline .mavetis-baseline.yaml]
+  review --base main [--path src/**] [--profile backend] [--baseline .mavetis-baseline.yaml]
   review src/file.go [--with-suggested] [--format json]
-  ci --base main [--path src/**] [--profile fintech]
+  ci --base main [--path src/**] [--profile fintech] [--baseline .mavetis-baseline.yaml]
   init [--default] [--force]
   baseline --create [--output .mavetis-baseline.yaml] [--base main]
   hooks install
@@ -221,6 +221,7 @@ func helpMessage() string {
   rules snapshot --output snapshots.yaml [--path src/auth/**]
   update [--check]
   version
+  -v, --version
 
 file review:
   mavetis review src/auth/login.go src/api/handler.ts --explain
@@ -232,9 +233,9 @@ file review:
 
 examples:
   mavetis review --staged --path 'src/**' --profile auth --explain
-  mavetis review --base main --path 'src/**' --profile backend
+  mavetis review --base main --path 'src/**' --profile backend --baseline .mavetis-baseline.yaml
   mavetis review src/scan/load.go --with-suggested
-  mavetis ci --base main --format json --profile fintech
+  mavetis ci --base main --format json --profile fintech --baseline .mavetis-baseline.yaml
   mavetis init
   mavetis init --force
   mavetis baseline --create --base main

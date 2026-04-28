@@ -35,7 +35,7 @@ func Run(spec Spec) error {
 		return err
 	}
 	if !newer {
-		fmt.Printf("%s is already up to date (%s)\n", model.Name, model.Version)
+	fmt.Printf("%s is already at its glorious latest version, no update required. you're running v%s; enjoy your perfectly timeless binary.\n", model.Name, model.Version)
 		return nil
 	}
 	if spec.Check {

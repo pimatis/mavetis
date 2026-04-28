@@ -136,5 +136,18 @@ func crypto() []model.Rule {
 			Require:     []string{`(?i)(verify|checkSignature|validateSignature|ParseWithClaims|rsa\.Verify|ecdsa\.Verify|hmac\.Equal)`},
 			Standards:   standard("OWASP-ASVS-V6.2", "OWASP-Crypto"),
 		},
+		{
+			ID:          "crypto.rsa.keysize",
+			Title:       "Inadequate RSA key size introduced",
+			Message:     "The diff generates or configures an RSA key with a size below the recommended minimum.",
+			Remediation: "Use at least 2048-bit RSA keys and prefer 3072-bit or higher for long-term protection.",
+			Category:    "crypto",
+			Severity:    "critical",
+			Confidence:  "high",
+			Target:      "added",
+			Paths:       codeAndConfigFiles(),
+			Require:     []string{`(?i)rsa\.GenerateKey\([^,]+,\s*(512|768|1024)\)|rsa_key_size\s*[:=]\s*(512|768|1024)|rsakeysize\s*[:=]\s*(512|768|1024)|rsaKeySize\s*[:=]\s*(512|768|1024)`},
+			Standards:   standard("OWASP-ASVS-V6.2", "OWASP-Crypto"),
+		},
 	}
 }

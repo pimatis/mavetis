@@ -61,5 +61,20 @@ func template() []model.Rule {
 			Near:        []string{`(?i)(upload|multipart|formfile|save|store|write)`},
 			Standards:   standard("OWASP-ASVS-V5.2", "OWASP-File"),
 		},
+		{
+			ID:          "file.download.traversal",
+			Title:       "Download path traversal risk introduced",
+			Message:     "The diff serves a file for download using a path that may be attacker-controlled.",
+			Remediation: "Normalize, bound, and validate download paths against an allowlist before serving files.",
+			Category:    "file",
+			Severity:    "high",
+			Confidence:  "medium",
+			Target:      "added",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(ServeFile|sendFile|send_file|download|attachment|Content-Disposition|res\.download|response\.download)`},
+			Near:        []string{`(?i)(filename|filepath|path|request|query|param|input|ctx\.|req\.|params\.)`},
+			Absent:      []string{`(?i)(filepath\.Clean|path\.Clean|filepath\.Base|safeJoin|EvalSymlinks|allowlist|whitelist|validateFile)`},
+			Standards:   standard("OWASP-ASVS-V5.4", "OWASP-ASVS-V12.4", "OWASP-File"),
+		},
 	}
 }

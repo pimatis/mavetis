@@ -12,8 +12,49 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"io"
+	"strings"
 	"testing"
 )
+
+func TestRunAlreadyUpToDate(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/repos/pimatis/mavetis/releases/latest" {
+			_, _ = writer.Write([]byte(`{"tag_name":"v0.1.4"}`))
+			return
+		}
+		writer.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	previous := newUpdater
+	newUpdater = func() *Updater {
+		return &Updater{
+			client:       server.Client(),
+			apiBase:      server.URL,
+			downloadBase: server.URL + "/releases/download",
+		}
+	}
+	defer func() { newUpdater = previous }()
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := Run(Spec{Check: false})
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	out, _ := io.ReadAll(r)
+	expected := "latest version of mavetis"
+	if !strings.Contains(string(out), expected) {
+		t.Fatalf("expected output to contain %q, got %q", expected, string(out))
+	}
+}
 
 func TestIsNewer(t *testing.T) {
 	newer, err := IsNewer("0.1.0", "v0.2.0")

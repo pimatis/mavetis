@@ -119,3 +119,24 @@ func callFlow(call *ast.CallExpr, state map[string]struct{}) Flow {
 	}
 	return flow
 }
+
+func GoUnsafePointer(body string) bool {
+	wrapped := "package p\nfunc _() {\n" + body + "\n}\n"
+	file, err := parser.ParseFile(token.NewFileSet(), "unsafe.go", wrapped, 0)
+	if err != nil {
+		return false
+	}
+	found := false
+	ast.Inspect(file, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if ok {
+			name := goCallName(call.Fun)
+			if strings.EqualFold(name, "unsafe.Pointer") {
+				found = true
+				return false
+			}
+		}
+		return true
+	})
+	return found
+}

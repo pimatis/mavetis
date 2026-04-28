@@ -18,6 +18,7 @@ func Builtins(config model.Config) []model.Rule {
 	rules = append(rules, supply()...)
 	rules = append(rules, drift()...)
 	rules = append(rules, observe()...)
+	rules = append(rules, logic()...)
 	return enrichControls(rules)
 }
 

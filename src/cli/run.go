@@ -54,7 +54,7 @@ func Execute(arguments []string) int {
 	if command == "baseline" {
 		return runBaseline(arguments[1:])
 	}
-	if command == "version" || command == "-v" {
+	if command == "version" || command == "-v" || command == "--version" {
 		fmt.Printf("%s %s\n", model.Name, model.Version)
 		return 0
 	}

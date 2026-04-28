@@ -118,6 +118,19 @@ func secrets(config model.Config) []model.Rule {
 			Standards:   standard("OWASP-ASVS-V8", "OWASP-Secrets"),
 			Mask:        true,
 		},
+		{
+			ID:          "secret.pii.exposed",
+			Title:       "PII or sensitive personal data exposed",
+			Message:     "The diff adds a value that resembles a national identifier, credit card, or other personal data pattern.",
+			Remediation: "Remove personal data from source control and replace it with tokens or synthetic data.",
+			Category:    "secret",
+			Severity:    "critical",
+			Confidence:  "medium",
+			Target:      "added",
+			Require:     []string{`\b\d{3}-\d{2}-\d{4}\b|\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b|\b[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}\b|\b\d{3}-\d{3}-\d{4}\b|\b[A-Z]{2}\d{6,9}\b`},
+			Standards:   standard("OWASP-ASVS-V8.3", "OWASP-Privacy"),
+			Mask:        true,
+		},
 	}
 	for _, prefix := range config.Company.Prefixes {
 		clean := strings.TrimSpace(prefix)

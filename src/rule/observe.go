@@ -73,5 +73,19 @@ func observe() []model.Rule {
 			Standards:   standard("OWASP-ASVS-V8.1", "OWASP-Logging"),
 			Mask:        true,
 		},
+		{
+			ID:          "observe.healthdata",
+			Title:       "Health or medical data logged or traced",
+			Message:     "The diff emits protected health information or medical identifiers into logs or traces.",
+			Remediation: "Keep health data out of logs and traces, or replace it with approved pseudonymized identifiers.",
+			Category:    "privacy",
+			Severity:    "critical",
+			Confidence:  "medium",
+			Target:      "added",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(log\.|logger\.|console\.|print\(|fmt\.(Print|Printf)|zap\.|slog\.|trace\.|span\.).*(diagnosis|condition|treatment|medical|health|patient|mrn|medicalRecord|phi|hipaa|dob|bloodType|allergy|prescription|medication)`},
+			Standards:   standard("OWASP-ASVS-V8.3", "OWASP-Privacy"),
+			Mask:        true,
+		},
 	}
 }

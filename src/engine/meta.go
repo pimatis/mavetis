@@ -36,6 +36,7 @@ func syntheticInfos() []model.RuleInfo {
 		{ID: "semantic.go.exec", Title: "Go AST found tainted flow into exec.Command", Category: "injection", Severity: "critical", Standards: []string{"OWASP-ASVS-V1.2"}},
 		{ID: "semantic.go.path", Title: "Go AST found tainted flow into os.Open", Category: "file", Severity: "high", Standards: []string{"OWASP-ASVS-V5.4"}},
 		{ID: "semantic.go.template", Title: "Go AST found tainted flow into template construction", Category: "template", Severity: "high", Standards: []string{"OWASP-ASVS-V1.2"}},
+		{ID: "semantic.go.unsafe", Title: "Go AST found unsafe.Pointer usage", Category: "memory", Severity: "high", Standards: []string{"OWASP-ASVS-V5.5"}},
 		{ID: "crypto.nonce.reuse", Title: "Nonce or IV appears reused inside the diff hunk", Category: "crypto", Severity: "critical", Standards: []string{"OWASP-ASVS-V6.2"}},
 		{ID: "supply.registry.public", Title: "Registry source points to a broad public index", Category: "supply", Severity: "high", Standards: []string{"OWASP-ASVS-V14.2"}},
 		{ID: "supply.version.floating", Title: "Floating dependency version introduced", Category: "supply", Severity: "medium", Standards: []string{"OWASP-ASVS-V14.2"}},
