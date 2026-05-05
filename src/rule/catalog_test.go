@@ -52,6 +52,21 @@ func TestBuiltinsExposeExpandedFamilies(t *testing.T) {
 		"logic.price.tampering",
 		"secret.pii.exposed",
 		"observe.healthdata",
+		"webhook.signature.missing",
+		"webhook.replay.window.missing",
+		"webhook.rawbody.missing",
+		"authorization.tenant.lookup.missing",
+		"authorization.cross.tenant.query",
+		"auth.reset.token.logged",
+		"auth.password.change.without.current",
+		"cloud.storage.public.read",
+		"cloud.storage.public.write",
+		"cloud.storage.presigned.longlived",
+		"iac.iam.policy.wildcard",
+		"iac.securitygroup.open.ssh",
+		"ai.prompt.secret.exposure",
+		"ai.prompt.user.system.mix",
+		"ai.tool.untrusted.input",
 	}
 	for _, id := range expected {
 		if !contains(rules, id) {

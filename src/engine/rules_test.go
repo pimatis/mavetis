@@ -52,6 +52,62 @@ func TestBuiltinsCoverExpandedSecurityRules(t *testing.T) {
 			hunkText: `"dependencies": { "lib": "git+https://github.com/example/lib.git#main" }`,
 			expect:   "supply.remote.dependency",
 		},
+		{
+			name:     "webhook signature missing",
+			path:     "api/webhook.ts",
+			line:     model.DiffLine{Kind: "added", Text: `stripeWebhookHandler = app.post("/webhook", handler)`, NewNumber: 6},
+			hunkText: `stripeWebhookHandler = app.post("/webhook", handler)`,
+			expect:   "webhook.signature.missing",
+		},
+		{
+			name:     "webhook raw body missing",
+			path:     "api/webhook.ts",
+			line:     model.DiffLine{Kind: "added", Text: `stripeWebhookHandler = await request.json()`, NewNumber: 7},
+			hunkText: `stripeWebhookHandler = await request.json()`,
+			expect:   "webhook.rawbody.missing",
+		},
+		{
+			name:     "tenant lookup missing",
+			path:     "repository/invoice.ts",
+			line:     model.DiffLine{Kind: "added", Text: `const invoice = await db.invoice.findUnique({ where: { invoiceId: req.params.id } })`, NewNumber: 14},
+			hunkText: `const invoice = await db.invoice.findUnique({ where: { invoiceId: req.params.id } })`,
+			expect:   "authorization.tenant.lookup.missing",
+		},
+		{
+			name:     "password reset token logged",
+			path:     "auth/reset.ts",
+			line:     model.DiffLine{Kind: "added", Text: `logger.info("reset token", resetToken)`, NewNumber: 22},
+			hunkText: `logger.info("reset token", resetToken)`,
+			expect:   "auth.reset.token.logged",
+		},
+		{
+			name:     "public storage read",
+			path:     "infra/bucket.yaml",
+			line:     model.DiffLine{Kind: "added", Text: `bucketAcl: public-read`, NewNumber: 4},
+			hunkText: `s3 bucket bucketAcl: public-read`,
+			expect:   "cloud.storage.public.read",
+		},
+		{
+			name:     "wildcard iam policy",
+			path:     "infra/policy.json",
+			line:     model.DiffLine{Kind: "added", Text: `"Action": "*"`, NewNumber: 9},
+			hunkText: `{"Effect":"Allow","Action":"*","Resource":"arn:aws:s3:::example"}`,
+			expect:   "iac.iam.policy.wildcard",
+		},
+		{
+			name:     "ai prompt secret exposure",
+			path:     "src/ai.ts",
+			line:     model.DiffLine{Kind: "added", Text: `messages.push({ role: "user", content: "api_key=" + process.env.API_KEY })`, NewNumber: 30},
+			hunkText: `messages.push({ role: "user", content: "api_key=" + process.env.API_KEY })`,
+			expect:   "ai.prompt.secret.exposure",
+		},
+		{
+			name:     "ai tool untrusted input",
+			path:     "src/agent.ts",
+			line:     model.DiffLine{Kind: "added", Text: `tool_calls.forEach(call => dispatch(call.name, call.arguments))`, NewNumber: 31},
+			hunkText: `tool_calls.forEach(call => dispatch(call.name, call.arguments))`,
+			expect:   "ai.tool.untrusted.input",
+		},
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {

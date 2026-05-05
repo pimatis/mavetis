@@ -20,6 +20,9 @@ func validateReview(spec model.Review) error {
 	if spec.WithSuggested && len(spec.Files) == 0 {
 		return errors.New("review option --with-suggested requires file targets")
 	}
+	if spec.WithContext && len(spec.Files) != 0 {
+		return errors.New("review option --with-context cannot be combined with file targets")
+	}
 	if spec.StdinTargets && len(spec.Files) == 0 {
 		return errors.New("review option --stdin-targets requires newline-separated paths on stdin")
 	}

@@ -32,6 +32,8 @@ func parseReview(arguments []string, ci bool) (model.Review, error) {
 	flags.StringVar(&spec.Path, "path", "", "Limit review to a path glob")
 	flags.StringVar(&spec.BaselinePath, "baseline", "", "Baseline file path")
 	flags.BoolVar(&spec.Explain, "explain", false, "Include finding reasons in text output")
+	flags.BoolVar(&spec.WithContext, "with-context", false, "Review bounded local dependencies imported by changed files")
+	flags.BoolVar(&spec.WithContext, "changed-with-context", false, "Review bounded local dependencies imported by changed files")
 	flags.BoolVar(&spec.WithSuggested, "with-suggested", false, "Review bounded suggested local dependencies together with the requested files")
 	flags.BoolVar(&spec.WithSuggested, "follow-imports", false, "Review bounded suggested local dependencies together with the requested files")
 	flags.BoolVar(&spec.StdinTargets, "stdin-targets", false, "Read newline-separated review targets from stdin")
@@ -122,11 +124,13 @@ func splitReviewArguments(arguments []string) ([]string, []string, error) {
 		"--baseline": {},
 	}
 	boolFlags := map[string]struct{}{
-		"--staged":         {},
-		"--explain":        {},
-		"--with-suggested": {},
-		"--follow-imports": {},
-		"--stdin-targets":  {},
+		"--changed-with-context": {},
+		"--with-context":         {},
+		"--staged":               {},
+		"--explain":              {},
+		"--with-suggested":       {},
+		"--follow-imports":       {},
+		"--stdin-targets":        {},
 	}
 	consumeFiles := false
 	for index := 0; index < len(arguments); index++ {
@@ -204,10 +208,10 @@ func defaultBase(value string) string {
 
 func helpMessage() string {
 	return `mavetis commands:
-  review --staged [--path src/**] [--profile auth] [--explain] [--baseline .mavetis-baseline.yaml]
-  review --base main [--path src/**] [--profile backend] [--baseline .mavetis-baseline.yaml]
+  review --staged [--path src/**] [--profile auth] [--with-context] [--explain] [--baseline .mavetis-baseline.yaml]
+  review --base main [--path src/**] [--profile backend] [--with-context] [--baseline .mavetis-baseline.yaml]
   review src/file.go [--with-suggested] [--format json]
-  ci --base main [--path src/**] [--profile fintech] [--baseline .mavetis-baseline.yaml]
+  ci --base main [--path src/**] [--profile fintech] [--with-context] [--baseline .mavetis-baseline.yaml]
   init [--default] [--force]
   baseline --create [--output .mavetis-baseline.yaml] [--base main]
   hooks install
@@ -232,10 +236,10 @@ file review:
   mavetis review src/scan/load.go --with-suggested
 
 examples:
-  mavetis review --staged --path 'src/**' --profile auth --explain
-  mavetis review --base main --path 'src/**' --profile backend --baseline .mavetis-baseline.yaml
+  mavetis review --staged --path 'src/**' --profile auth --with-context --explain
+  mavetis review --base main --path 'src/**' --profile backend --with-context --baseline .mavetis-baseline.yaml
   mavetis review src/scan/load.go --with-suggested
-  mavetis ci --base main --format json --profile fintech --baseline .mavetis-baseline.yaml
+  mavetis ci --base main --format json --profile fintech --with-context --baseline .mavetis-baseline.yaml
   mavetis init
   mavetis init --force
   mavetis baseline --create --base main

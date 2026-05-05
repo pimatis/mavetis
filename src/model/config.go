@@ -70,6 +70,7 @@ type Review struct {
 	Path          string
 	Explain       bool
 	Staged        bool
+	WithContext   bool
 	WithSuggested bool
 	StdinTargets  bool
 	BaselinePath  string

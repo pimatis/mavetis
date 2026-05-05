@@ -80,11 +80,11 @@ Remove-Item "$HOME\AppData\Local\mavetis\bin\mavetis.exe" -Force
 ## Usage
 
 ```bash
-# Review staged auth changes with profile-aware output
-mavetis review --staged --path 'src/**' --profile auth --explain
+# Review staged auth changes with bounded imported dependency context
+mavetis review --staged --path 'src/**' --profile auth --with-context --explain
 
 # Compare backend changes against base branch
-mavetis review --base main --path 'src/**' --profile backend
+mavetis review --base main --path 'src/**' --profile backend --with-context
 
 # Review local files directly (no Git diff required)
 mavetis review src/auth/login.go src/api/handler.ts --explain
@@ -136,6 +136,7 @@ mavetis review @config/nginx.conf --profile backend --format json
 - Rejects binary targets, directories, and oversized files
 - Emits bounded local dependency suggestions for nearby imports
 - `--with-suggested` reviews those suggested files in the same run
+- Diff and CI review support `--with-context` / `--changed-with-context` to include bounded local dependencies imported by changed files
 
 ---
 
@@ -363,6 +364,9 @@ baseline:
 - IDOR patterns and operation-level permission regressions
 - JWT security flaws (decode-without-verify, missing binding)
 - OAuth weaknesses (state, PKCE, nonce, replay attacks)
+- Password reset token logging and password-change reauthentication gaps
+- Multi-tenant lookup and cross-tenant query scope gaps
+- Webhook signature, raw-body, and replay-window weaknesses
 
 ### Injection and Input Validation
 
@@ -380,6 +384,14 @@ baseline:
 - Install-time script execution and shell downloads
 - Mutable GitHub Action references
 - Registry trust enforcement
+- Cloud object storage public access and long-lived presigned URLs
+- Wildcard IAM policies and public SSH ingress
+
+### AI and LLM Security
+
+- Secret material sent to prompts or model messages
+- User-controlled content assigned to privileged system prompts
+- Tool/function execution from untrusted model output without validation
 
 ### Regression Detection
 

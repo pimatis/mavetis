@@ -121,6 +121,33 @@ func TestParseReviewSupportsWithSuggested(t *testing.T) {
 	}
 }
 
+func TestParseReviewSupportsChangedWithContext(t *testing.T) {
+	spec, err := parseReview([]string{"--staged", "--changed-with-context"}, false)
+	if err != nil {
+		t.Fatalf("parse review: %v", err)
+	}
+	if !spec.WithContext {
+		t.Fatalf("expected changed context: %#v", spec)
+	}
+}
+
+func TestParseReviewSupportsWithContextAlias(t *testing.T) {
+	spec, err := parseReview([]string{"--base", "main", "--with-context"}, false)
+	if err != nil {
+		t.Fatalf("parse review: %v", err)
+	}
+	if !spec.WithContext {
+		t.Fatalf("expected changed context: %#v", spec)
+	}
+}
+
+func TestParseReviewRejectsWithContextWithFiles(t *testing.T) {
+	_, err := parseReview([]string{"src/app.go", "--with-context"}, false)
+	if err == nil {
+		t.Fatal("expected with-context validation error")
+	}
+}
+
 func TestParseReviewRejectsWithSuggestedWithoutFiles(t *testing.T) {
 	_, err := parseReview([]string{"--with-suggested"}, false)
 	if err == nil {
