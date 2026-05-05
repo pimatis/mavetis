@@ -31,6 +31,28 @@ type Rule struct {
 	Entropy           float64
 	Standards         []string
 	Mask              bool
+	VulnerableExample string
+	SafeExample       string
+}
+
+type RuleExplanation struct {
+	ID                string
+	Title             string
+	Severity          string
+	Confidence        string
+	Category          string
+	Type              string
+	Target            string
+	Engine            string
+	Message           string
+	Remediation       string
+	Standards         []string
+	Scope             []string
+	Triggers          []string
+	PositiveContext   []string
+	NegativeContext   []string
+	VulnerableExample string
+	SafeExample       string
 }
 
 func SeverityRank(value string) int {

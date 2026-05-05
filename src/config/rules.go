@@ -86,6 +86,8 @@ func decodeRule(mapped map[string]any, rule *model.Rule) {
 	rule.Title, _ = yaml.String(mapped["title"])
 	rule.Message, _ = yaml.String(mapped["message"])
 	rule.Remediation, _ = yaml.String(mapped["remediation"])
+	rule.VulnerableExample, _ = yaml.String(mapped["vulnerable-example"])
+	rule.SafeExample, _ = yaml.String(mapped["safe-example"])
 	rule.Category, _ = yaml.String(mapped["category"])
 	rule.Severity, _ = yaml.String(mapped["severity"])
 	rule.Confidence, _ = yaml.String(mapped["confidence"])

@@ -137,6 +137,9 @@ func TestLoadRules(t *testing.T) {
   - id: custom.secret
     title: Custom secret
     message: Custom secret exposed
+    remediation: Move the secret into managed storage
+    vulnerable-example: const token = "corp_ABCDEFGH"
+    safe-example: const token = getSecret("service-token")
     category: secret
     severity: high
     confidence: high
@@ -181,6 +184,9 @@ func TestLoadRules(t *testing.T) {
 	}
 	if len(rules[0].Absent) != 1 || rules[0].Absent[0] != "safe_prefix" {
 		t.Fatalf("unexpected absent patterns: %#v", rules[0].Absent)
+	}
+	if rules[0].VulnerableExample == "" || rules[0].SafeExample == "" {
+		t.Fatalf("expected rule examples: %#v", rules[0])
 	}
 	if rules[1].Target != "deleted" || len(rules[1].Require) != 1 {
 		t.Fatalf("unexpected protected rule decoding: %#v", rules[1])
