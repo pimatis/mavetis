@@ -98,6 +98,9 @@ mavetis init
 # Create a baseline from current findings to suppress known issues
 mavetis baseline --create --base main
 
+# Explain why a rule fires and how to reduce false positives
+mavetis rules explain --id inject.sql.raw
+
 # Install Git hooks for automated scanning
 mavetis hooks install
 ```
@@ -115,6 +118,7 @@ mavetis hooks install
 | `mavetis rules validate` | Validate custom rule definitions |
 | `mavetis rules list` | Display available security rules |
 | `mavetis rules show` | Display detailed rule information |
+| `mavetis rules explain` | Explain rule triggers, guards, examples, and remediation |
 | `mavetis rules test` | Test rules against sample diffs |
 | `mavetis rules matrix` | Generate compliance coverage matrix |
 | `mavetis rules snapshot` | Generate repository security snapshots |
@@ -215,6 +219,8 @@ rules:
     title: Untrusted Fetch Operation
     message: Request-controlled URL reached a sensitive fetch sink.
     remediation: Validate and allowlist outbound destinations before processing.
+    vulnerable-example: fetch(request.query.url)
+    safe-example: fetch(allowlistedOutboundURL(request.query.url))
     category: inject
     severity: high
     confidence: medium
@@ -230,6 +236,18 @@ rules:
     standards:
       - OWASP-ASVS-V5.3
 ```
+
+### Rule Explanations
+
+Explain a builtin, custom, or synthetic semantic rule without running a scan:
+
+```bash
+mavetis rules explain --id inject.sql.raw
+mavetis rules explain --id semantic.go.ssrf
+mavetis explain rule semantic.go.ssrf
+```
+
+The explanation output includes rule title, severity, confidence, category, ASVS mappings, trigger patterns, positive context, negative context / absent guards, representative vulnerable and safe snippets, and remediation guidance. Custom rules can provide `vulnerable-example` and `safe-example` fields so security teams can document organization-specific triage guidance next to the matcher definition.
 
 ### Typed Policies
 
