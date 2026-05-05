@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Pimatis/mavetis/src/model"
@@ -70,6 +72,59 @@ func TestRunRulesMatrix(t *testing.T) {
 	}
 }
 
+func TestRunRulesExplainBuiltin(t *testing.T) {
+	code, body := captureStdout(t, func() int {
+		return runRules([]string{"explain", "--id", "inject.sql.raw"})
+	})
+	if code != 0 {
+		t.Fatalf("expected explain success, got %d", code)
+	}
+	checks := []string{
+		"Rule: inject.sql.raw",
+		"Title: Raw SQL query introduced",
+		"ASVS mappings:",
+		"Trigger patterns:",
+		"Example vulnerable snippet:",
+		"Example safe pattern:",
+	}
+	for _, check := range checks {
+		if !strings.Contains(body, check) {
+			t.Fatalf("expected %q in %q", check, body)
+		}
+	}
+}
+
+func TestRunRulesExplainSynthetic(t *testing.T) {
+	code, body := captureStdout(t, func() int {
+		return runRules([]string{"explain", "--id", "semantic.go.ssrf"})
+	})
+	if code != 0 {
+		t.Fatalf("expected synthetic explain success, got %d", code)
+	}
+	if !strings.Contains(body, "sink: http.Get consumes the tainted value") {
+		t.Fatalf("expected semantic trigger details, got %q", body)
+	}
+}
+
+func TestExecuteExplainRuleAlias(t *testing.T) {
+	code, body := captureStdout(t, func() int {
+		return Execute([]string{"explain", "rule", "semantic.go.ssrf"})
+	})
+	if code != 0 {
+		t.Fatalf("expected explain alias success, got %d", code)
+	}
+	if !strings.Contains(body, "Rule: semantic.go.ssrf") {
+		t.Fatalf("expected alias output, got %q", body)
+	}
+}
+
+func TestRunRulesExplainRequiresID(t *testing.T) {
+	code := runRules([]string{"explain"})
+	if code != 2 {
+		t.Fatalf("expected missing id failure, got %d", code)
+	}
+}
+
 func TestAllRulesFiltersByProfile(t *testing.T) {
 	rules, err := allRules("", "auth")
 	if err != nil {
@@ -117,4 +172,26 @@ func TestBlockedUsesDefaultThresholdWithoutZoneOverride(t *testing.T) {
 	if !blocked(report, "medium") {
 		t.Fatal("expected default threshold to block")
 	}
+}
+
+func captureStdout(t *testing.T, run func() int) (int, string) {
+	t.Helper()
+	previous := os.Stdout
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe stdout: %v", err)
+	}
+	os.Stdout = writer
+	defer func() {
+		os.Stdout = previous
+	}()
+	code := run()
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close stdout writer: %v", err)
+	}
+	body, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("read stdout: %v", err)
+	}
+	return code, string(body)
 }

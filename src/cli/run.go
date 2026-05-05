@@ -42,6 +42,9 @@ func Execute(arguments []string) int {
 	if command == "rules" {
 		return runRules(arguments[1:])
 	}
+	if command == "explain" {
+		return runExplain(arguments[1:])
+	}
 	if command == "update" {
 		return runUpdate(arguments[1:])
 	}

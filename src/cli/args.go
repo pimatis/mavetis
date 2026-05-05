@@ -220,6 +220,8 @@ func helpMessage() string {
   rules validate --rules rules.yaml
   rules list [--rules rules.yaml]
   rules show --id rule.id [--rules rules.yaml]
+  rules explain --id rule.id [--rules rules.yaml]
+  explain rule rule.id
   rules test --diff sample.diff [--rules rules.yaml]
   rules matrix [--rules rules.yaml] [--profile auth]
   rules snapshot --output snapshots.yaml [--path src/auth/**]
@@ -244,6 +246,8 @@ examples:
   mavetis init --force
   mavetis baseline --create --base main
   mavetis rules validate --rules rules.yaml
+  mavetis rules explain --id inject.sql.raw
+  mavetis explain rule semantic.go.ssrf
   mavetis rules snapshot --output .mavetis-snapshots.yaml --path 'src/auth/**'
   mavetis update --check
   mavetis hooks install

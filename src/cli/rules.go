@@ -6,17 +6,19 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/Pimatis/mavetis/src/config"
 	"github.com/Pimatis/mavetis/src/diff"
 	"github.com/Pimatis/mavetis/src/engine"
 	"github.com/Pimatis/mavetis/src/model"
 	"github.com/Pimatis/mavetis/src/output"
+	"github.com/Pimatis/mavetis/src/rule"
 )
 
 func runRules(arguments []string) int {
 	if len(arguments) == 0 {
-		return fail(errors.New("rules command requires validate, list, show, test, matrix, or snapshot"))
+		return fail(errors.New("rules command requires validate, list, show, explain, test, matrix, or snapshot"))
 	}
 	if arguments[0] == "validate" {
 		return validateRules(arguments[1:])
@@ -27,6 +29,9 @@ func runRules(arguments []string) int {
 	if arguments[0] == "show" {
 		return showRule(arguments[1:])
 	}
+	if arguments[0] == "explain" {
+		return explainRule(arguments[1:])
+	}
 	if arguments[0] == "test" {
 		return testRules(arguments[1:])
 	}
@@ -36,7 +41,20 @@ func runRules(arguments []string) int {
 	if arguments[0] == "snapshot" {
 		return snapshotRules(arguments[1:])
 	}
-	return fail(errors.New("rules command requires validate, list, show, test, matrix, or snapshot"))
+	return fail(errors.New("rules command requires validate, list, show, explain, test, matrix, or snapshot"))
+}
+
+func runExplain(arguments []string) int {
+	if len(arguments) == 0 {
+		return fail(errors.New("explain command requires rule"))
+	}
+	if arguments[0] == "rule" {
+		if len(arguments) == 2 && !strings.HasPrefix(arguments[1], "-") {
+			return explainRule([]string{"--id", arguments[1]})
+		}
+		return explainRule(arguments[1:])
+	}
+	return fail(errors.New("explain command requires rule"))
 }
 
 func validateRules(arguments []string) int {
@@ -116,6 +134,33 @@ func showRule(arguments []string) int {
 		return 0
 	}
 	return fail(fmt.Errorf("rule not found: %s", *id))
+}
+
+func explainRule(arguments []string) int {
+	flags := flag.NewFlagSet("rules explain", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	path := flags.String("rules", "", "Path to custom rules file")
+	profile := flags.String("profile", "", "Rule profile: auth, fintech, backend, frontend")
+	id := flags.String("id", "", "Rule identifier")
+	if err := flags.Parse(arguments); err != nil {
+		return 2
+	}
+	if err := config.ValidateProfile(*profile); err != nil {
+		return fail(err)
+	}
+	if *id == "" {
+		return fail(errors.New("rules explain requires --id"))
+	}
+	rules, err := allRules(*path, *profile)
+	if err != nil {
+		return fail(err)
+	}
+	explanation, ok := rule.Explain(*id, rules)
+	if !ok {
+		return fail(fmt.Errorf("rule not found: %s", *id))
+	}
+	fmt.Print(output.RuleExplanation(explanation))
+	return 0
 }
 
 func testRules(arguments []string) int {
