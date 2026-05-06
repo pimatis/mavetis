@@ -33,6 +33,9 @@ func TextExplain(report model.Report, explain bool) string {
 			builder.WriteString(line("Zone", fmt.Sprintf("%s severity+%d fail-on=%s", zone.Name, zone.SeverityOffset, zone.FailOn), tone))
 		}
 	}
+	if report.Score != nil {
+		builder.WriteString(line("RiskScore", fmt.Sprintf("%.2f (%s)", report.Score.Value, report.Score.Rating), tone))
+	}
 	builder.WriteString(summary(report.Summary, tone))
 	for _, finding := range report.Findings {
 		builder.WriteString("\n")

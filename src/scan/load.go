@@ -36,6 +36,8 @@ var ignoredWalkDirs = map[string]struct{}{
 type ScannedFile struct {
 	Path    string
 	Content string
+	Size    int64
+	ModTime int64
 }
 
 func Root() (string, error) {
@@ -249,7 +251,7 @@ func loadFile(root string, target string) (ScannedFile, string, error) {
 	if bytes.IndexByte(content, 0) >= 0 {
 		return ScannedFile{}, "", fmt.Errorf("review target must be a text file: %s", target)
 	}
-	return ScannedFile{Path: filepath.ToSlash(rel), Content: string(content)}, real, nil
+	return ScannedFile{Path: filepath.ToSlash(rel), Content: string(content), Size: info.Size(), ModTime: info.ModTime().UnixNano()}, real, nil
 }
 
 func realPath(path string) (string, error) {

@@ -1,13 +1,16 @@
 package cli
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/Pimatis/mavetis/src/baseline"
+	"github.com/Pimatis/mavetis/src/cache"
 	"github.com/Pimatis/mavetis/src/config"
 	"github.com/Pimatis/mavetis/src/diff"
 	"github.com/Pimatis/mavetis/src/engine"
@@ -17,6 +20,7 @@ import (
 	"github.com/Pimatis/mavetis/src/model"
 	"github.com/Pimatis/mavetis/src/output"
 	"github.com/Pimatis/mavetis/src/resolve"
+	"github.com/Pimatis/mavetis/src/risk"
 	"github.com/Pimatis/mavetis/src/scan"
 )
 
@@ -57,6 +61,9 @@ func Execute(arguments []string) int {
 	if command == "baseline" {
 		return runBaseline(arguments[1:])
 	}
+	if command == "secrets" {
+		return runSecrets(arguments[1:])
+	}
 	if command == "version" || command == "-v" || command == "--version" {
 		fmt.Printf("%s %s\n", model.Name, model.Version)
 		return 0
@@ -75,6 +82,7 @@ func runReview(arguments []string, ci bool) int {
 		return fail(err)
 	}
 	report = applyBaseline(report, cfg, spec)
+	report.Score = riskScore(report.Summary)
 	if err := render(report, cfg.Output, spec.Explain); err != nil {
 		return fail(err)
 	}
@@ -162,8 +170,7 @@ func buildFileReport(spec model.Review, cfg model.Config, rules []model.Rule) (m
 		}
 		suggestions = additions
 	}
-	parsed := scan.FromFiles(reviewFiles)
-	report, err := engine.Review(parsed, cfg, rules)
+	report, err := reviewScannedFiles(root, reviewFiles, spec, cfg, rules)
 	if err != nil {
 		return model.Report{}, err
 	}
@@ -176,6 +183,108 @@ func buildFileReport(spec model.Review, cfg model.Config, rules []model.Rule) (m
 		report.SuggestedCommand = suggestedCommand(spec)
 	}
 	return report, nil
+}
+
+func reviewScannedFiles(root string, files []scan.ScannedFile, spec model.Review, cfg model.Config, rules []model.Rule) (model.Report, error) {
+	if spec.NoCache {
+		return engine.Review(scan.FromFiles(files), cfg, rules)
+	}
+	cacheKey, err := reviewCacheKey(cfg, rules)
+	if err != nil {
+		return model.Report{}, err
+	}
+	cachePath, cacheData, err := cache.Load(root, "review", spec.CachePath, cacheKey)
+	if err != nil {
+		return model.Report{}, err
+	}
+	cacheFiles := make([]cache.File, 0, len(files))
+	for _, file := range files {
+		cacheFiles = append(cacheFiles, cache.File{Path: file.Path, Size: file.Size, ModTime: file.ModTime})
+	}
+	cache.Prune(cacheData, cacheFiles)
+	report := model.Report{Meta: model.DiffMeta{Mode: "file"}}
+	report.Policy = &model.Policy{Profile: cfg.Profile, FailOn: cfg.FailOn}
+	seen := map[string]struct{}{}
+	findings := make([]model.Finding, 0)
+	for _, file := range files {
+		cacheFile := cache.File{Path: file.Path, Size: file.Size, ModTime: file.ModTime}
+		fileFindings, ok := cache.Findings(cacheData, cacheFile)
+		if !ok {
+			fileReport, err := engine.Review(scan.FromFiles([]scan.ScannedFile{file}), cfg, rules)
+			if err != nil {
+				return report, err
+			}
+			fileFindings = fileReport.Findings
+			cache.Put(cacheData, cacheFile, fileFindings)
+			report.Rules = fileReport.Rules
+			if report.Policy == nil {
+				report.Policy = fileReport.Policy
+			}
+		}
+		for _, finding := range fileFindings {
+			if _, exists := seen[finding.ID]; exists {
+				continue
+			}
+			seen[finding.ID] = struct{}{}
+			findings = append(findings, finding)
+		}
+	}
+	if len(report.Rules) == 0 {
+		emptyReport, err := engine.Review(scan.FromFiles(nil), cfg, rules)
+		if err != nil {
+			return report, err
+		}
+		report.Rules = emptyReport.Rules
+		report.Policy = emptyReport.Policy
+	}
+	sortFindings(findings)
+	report.Findings = findings
+	report.Summary.Files = len(files)
+	for _, finding := range findings {
+		report.Summary.Add(finding)
+	}
+	if err := cache.Save(cachePath, cacheData); err != nil {
+		return report, err
+	}
+	return report, nil
+}
+
+func reviewCacheKey(cfg model.Config, rules []model.Rule) (string, error) {
+	payload := struct {
+		Severity string
+		FailOn   string
+		Profile  string
+		Allow    model.Allow
+		Zones    model.Zones
+		Rules    []model.Rule
+	}{
+		Severity: cfg.Severity,
+		FailOn:   cfg.FailOn,
+		Profile:  cfg.Profile,
+		Allow:    cfg.Allow,
+		Zones:    cfg.Zones,
+		Rules:    rules,
+	}
+	content, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	return cache.Key(string(content)), nil
+}
+
+func sortFindings(findings []model.Finding) {
+	sort.Slice(findings, func(left int, right int) bool {
+		if model.SeverityRank(findings[left].Severity) != model.SeverityRank(findings[right].Severity) {
+			return model.SeverityRank(findings[left].Severity) > model.SeverityRank(findings[right].Severity)
+		}
+		if findings[left].Path != findings[right].Path {
+			return findings[left].Path < findings[right].Path
+		}
+		if findings[left].Line != findings[right].Line {
+			return findings[left].Line < findings[right].Line
+		}
+		return findings[left].RuleID < findings[right].RuleID
+	})
 }
 
 func applyBaseline(report model.Report, cfg model.Config, spec model.Review) model.Report {
@@ -413,4 +522,9 @@ func blocked(report model.Report, threshold string) bool {
 func fail(err error) int {
 	fmt.Fprintln(os.Stderr, err.Error())
 	return 2
+}
+
+func riskScore(summary model.Summary) *model.Score {
+	score := risk.Calculate(summary)
+	return &model.Score{Value: score.Value, Rating: score.Rating}
 }

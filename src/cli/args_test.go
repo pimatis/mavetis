@@ -35,6 +35,15 @@ func TestHelpMessageIncludesDeliveredPhases(t *testing.T) {
 	if !strings.Contains(message, "file review") {
 		t.Fatalf("expected file review help text: %q", message)
 	}
+	if !strings.Contains(message, "secrets scan:") {
+		t.Fatalf("expected secrets scan help text: %q", message)
+	}
+	if !strings.Contains(message, "mavetis secrets scan . --path 'src/**'") {
+		t.Fatalf("expected secrets scan example: %q", message)
+	}
+	if !strings.Contains(message, "mavetis secrets scan . --no-cache") {
+		t.Fatalf("expected secrets cache help text: %q", message)
+	}
 }
 
 func TestParseReviewSupportsProfile(t *testing.T) {
@@ -112,12 +121,25 @@ func TestParseReviewSupportsFlagsAfterPlainTarget(t *testing.T) {
 }
 
 func TestParseReviewSupportsWithSuggested(t *testing.T) {
-	spec, err := parseReview([]string{"src/app.go", "--with-suggested"}, false)
+	spec, err := parseReview([]string{"src/app.go", "--with-suggested", "--cache", ".mavetis-review-cache.json"}, false)
 	if err != nil {
 		t.Fatalf("parse review: %v", err)
 	}
 	if !spec.WithSuggested {
 		t.Fatalf("expected with suggested: %#v", spec)
+	}
+	if spec.CachePath != ".mavetis-review-cache.json" {
+		t.Fatalf("unexpected cache path: %#v", spec)
+	}
+}
+
+func TestParseReviewSupportsNoCache(t *testing.T) {
+	spec, err := parseReview([]string{"src/app.go", "--no-cache"}, false)
+	if err != nil {
+		t.Fatalf("parse review: %v", err)
+	}
+	if !spec.NoCache {
+		t.Fatalf("expected no cache: %#v", spec)
 	}
 }
 

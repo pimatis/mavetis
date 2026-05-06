@@ -74,5 +74,7 @@ type Review struct {
 	WithSuggested bool
 	StdinTargets  bool
 	BaselinePath  string
+	CachePath     string
+	NoCache       bool
 	Files         []string
 }

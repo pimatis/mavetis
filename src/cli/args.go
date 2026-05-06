@@ -31,7 +31,9 @@ func parseReview(arguments []string, ci bool) (model.Review, error) {
 	flags.StringVar(&spec.RulesPath, "rules", "", "Custom rules path")
 	flags.StringVar(&spec.Path, "path", "", "Limit review to a path glob")
 	flags.StringVar(&spec.BaselinePath, "baseline", "", "Baseline file path")
+	flags.StringVar(&spec.CachePath, "cache", "", "Incremental file review cache path")
 	flags.BoolVar(&spec.Explain, "explain", false, "Include finding reasons in text output")
+	flags.BoolVar(&spec.NoCache, "no-cache", false, "Disable incremental file review cache")
 	flags.BoolVar(&spec.WithContext, "with-context", false, "Review bounded local dependencies imported by changed files")
 	flags.BoolVar(&spec.WithContext, "changed-with-context", false, "Review bounded local dependencies imported by changed files")
 	flags.BoolVar(&spec.WithSuggested, "with-suggested", false, "Review bounded suggested local dependencies together with the requested files")
@@ -122,12 +124,14 @@ func splitReviewArguments(arguments []string) ([]string, []string, error) {
 		"--rules":    {},
 		"--path":     {},
 		"--baseline": {},
+		"--cache":    {},
 	}
 	boolFlags := map[string]struct{}{
 		"--changed-with-context": {},
 		"--with-context":         {},
 		"--staged":               {},
 		"--explain":              {},
+		"--no-cache":             {},
 		"--with-suggested":       {},
 		"--follow-imports":       {},
 		"--stdin-targets":        {},
@@ -210,10 +214,11 @@ func helpMessage() string {
 	return `mavetis commands:
   review --staged [--path src/**] [--profile auth] [--with-context] [--explain] [--baseline .mavetis-baseline.yaml]
   review --base main [--path src/**] [--profile backend] [--with-context] [--baseline .mavetis-baseline.yaml]
-  review src/file.go [--with-suggested] [--format json]
+  review src/file.go [--with-suggested] [--format json] [--cache .mavetis-review-cache.json]
   ci --base main [--path src/**] [--profile fintech] [--with-context] [--baseline .mavetis-baseline.yaml]
   init [--default] [--force]
   baseline --create [--output .mavetis-baseline.yaml] [--base main]
+  secrets scan [path ...] [--path src/**] [--format json]
   hooks install
   hooks uninstall
   shell init zsh
@@ -236,6 +241,16 @@ file review:
   mavetis review src/auth/*.go --severity high
   printf '%s\n' src/rule/token.go src/rule/scope.go | mavetis review --stdin-targets
   mavetis review src/scan/load.go --with-suggested
+  mavetis review src --cache .mavetis-review-cache.json
+  mavetis review src --no-cache
+
+secrets scan:
+  mavetis secrets scan
+  mavetis secrets scan . --path 'src/**'
+  mavetis secrets scan config .env --format json --fail-on high
+  mavetis secrets scan . --severity high
+  mavetis secrets scan . --cache .mavetis-secrets-cache.json
+  mavetis secrets scan . --no-cache
 
 examples:
   mavetis review --staged --path 'src/**' --profile auth --with-context --explain
@@ -245,6 +260,7 @@ examples:
   mavetis init
   mavetis init --force
   mavetis baseline --create --base main
+  mavetis secrets scan . --path 'src/**' --format json
   mavetis rules validate --rules rules.yaml
   mavetis rules explain --id inject.sql.raw
   mavetis explain rule semantic.go.ssrf

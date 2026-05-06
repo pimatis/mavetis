@@ -98,6 +98,9 @@ mavetis init
 # Create a baseline from current findings to suppress known issues
 mavetis baseline --create --base main
 
+# Scan local files for leaked secrets without Git diff context
+mavetis secrets scan . --path 'src/**' --format json
+
 # Explain why a rule fires and how to reduce false positives
 mavetis rules explain --id inject.sql.raw
 
@@ -113,6 +116,7 @@ mavetis hooks install
 | `mavetis ci` | Optimized analysis for CI/CD with profile-aware policy evaluation |
 | `mavetis init` | Initialize project configuration with interactive or default `.mavetis.yaml` |
 | `mavetis baseline --create` | Capture current findings as a baseline to suppress known issues |
+| `mavetis secrets scan` | Scan local files for API keys, tokens, private keys, and dotenv leaks |
 | `mavetis hooks install` | Configure pre-commit and pre-push scanning |
 | `mavetis hooks uninstall` | Remove configured Git hooks |
 | `mavetis rules validate` | Validate custom rule definitions |
@@ -134,12 +138,16 @@ mavetis review src/auth/login.go --explain
 mavetis review src/auth/*.go --severity high
 mavetis review src/scan/load.go --with-suggested
 mavetis review @config/nginx.conf --profile backend --format json
+mavetis review src --cache .mavetis-review-cache.json
+mavetis review src --no-cache
 ```
 
 - Accepts plain relative paths and `@path` targets
 - Rejects binary targets, directories, and oversized files
 - Emits bounded local dependency suggestions for nearby imports
 - `--with-suggested` reviews those suggested files in the same run
+- Incremental cache is enabled for file review mode so unchanged files reuse previous findings instead of being re-analyzed
+- Use `--cache <path>` for an explicit cache file or `--no-cache` for cold validation runs
 - Diff and CI review support `--with-context` / `--changed-with-context` to include bounded local dependencies imported by changed files
 
 ---
@@ -374,6 +382,19 @@ baseline:
 - Weak randomness, hashing, and ciphers
 - IV/nonce misuse and key confusion attacks
 
+### Secrets Scan Command
+
+Run a repository-local scan for exposed API keys, tokens, private keys, and `.env` leaks without requiring staged changes or a Git diff:
+
+```bash
+mavetis secrets scan
+mavetis secrets scan . --path 'src/**'
+mavetis secrets scan config .env --format json --fail-on high
+mavetis secrets scan . --no-cache
+```
+
+The scanner combines provider-specific patterns with Shannon entropy checks for generic secret candidates, masks matched values in every output format, respects `ignore` and `allow` configuration, skips common dependency/build directories, and never performs network calls. Incremental cache is enabled by default in the user cache directory so unchanged files are not re-read or re-analyzed; use `--cache <path>` for an explicit cache file or `--no-cache` for one-off cold scans.
+
 ### Access Control and Sessions
 
 - Authentication bypass and middleware removal
@@ -420,6 +441,20 @@ baseline:
 - bcrypt cost downgrades and MFA weakening
 - Architectural boundary violations
 - Snapshot regressions against captured baselines
+
+### Risk Score
+
+Every scan produces a severity-weighted risk score based on the number of findings and the analyzed file count:
+
+| Rating | Score Range | Description |
+|--------|-------------|-------------|
+| `none` | `0` | No findings detected |
+| `low` | `> 0 - 1.5` | Low overall exposure |
+| `medium` | `1.5 - 3.5` | Moderate exposure; review recommended |
+| `high` | `3.5 - 6.0` | High exposure; immediate attention advised |
+| `critical` | `> 6.0` | Critical exposure; urgent remediation required |
+
+The score formula follows OWASP severity weighting: `critical=10`, `high=7`, `medium=4`, `low=1`, normalized per file reviewed. The score is included in text and JSON output automatically.
 
 ---
 

@@ -4,10 +4,16 @@ type Report struct {
 	Meta             DiffMeta     `json:"meta"`
 	Policy           *Policy      `json:"policy,omitempty"`
 	Summary          Summary      `json:"summary"`
+	Score            *Score       `json:"score,omitempty"`
 	Findings         []Finding    `json:"findings"`
 	Rules            []RuleInfo   `json:"rules,omitempty"`
 	Suggestions      []Suggestion `json:"suggestions,omitempty"`
 	SuggestedCommand string       `json:"suggestedCommand,omitempty"`
+}
+
+type Score struct {
+	Value  float64 `json:"value"`
+	Rating string  `json:"rating"`
 }
 
 type Suggestion struct {
