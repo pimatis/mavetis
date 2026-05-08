@@ -43,7 +43,7 @@ func nonceVars(hunk model.DiffHunk) map[string]int {
 		match := nonceAssign.FindStringSubmatch(line.Text)
 		if len(match) >= 2 {
 			name := strings.ToLower(match[1])
-			if strings.Contains(name, "nonce") || strings.Contains(name, "iv") {
+			if nonceName(name) {
 				assigned[name] = struct{}{}
 			}
 			if strings.Contains(strings.ToLower(line.Text), "nonce") || strings.Contains(strings.ToLower(line.Text), " iv") {
@@ -66,4 +66,20 @@ func nonceVars(hunk model.DiffHunk) map[string]int {
 		}
 	}
 	return counts
+}
+
+func nonceName(name string) bool {
+	if strings.Contains(name, "nonce") {
+		return true
+	}
+	if name == "iv" {
+		return true
+	}
+	if strings.HasPrefix(name, "iv") {
+		return true
+	}
+	if strings.HasSuffix(name, "iv") {
+		return true
+	}
+	return false
 }
