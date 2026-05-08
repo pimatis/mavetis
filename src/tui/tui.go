@@ -26,6 +26,13 @@ const (
 	stateAbout
 )
 
+type reviewMode int
+
+const (
+	reviewStaged reviewMode = iota
+	reviewAllFiles
+)
+
 type reviewMsg struct {
 	report model.Report
 	err    error
@@ -41,9 +48,10 @@ type modelImpl struct {
 	menuCursor int
 
 	// Review
-	spinner   spinner.Model
-	reviewErr error
-	report    *model.Report
+	reviewMode reviewMode
+	spinner    spinner.Model
+	reviewErr  error
+	report     *model.Report
 
 	// Findings list
 	findingsCursor int
@@ -55,7 +63,8 @@ type modelImpl struct {
 }
 
 var menuItems = []string{
-	"Run Review (staged changes)",
+	"Review Staged Changes",
+	"Review All Files",
 	"About",
 	"Quit",
 }
@@ -154,12 +163,22 @@ func (m *modelImpl) handleMenuKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m *modelImpl) handleMenuSelect() (tea.Model, tea.Cmd) {
 	choice := menuItems[m.menuCursor]
 
-	if strings.HasPrefix(choice, "Run Review") {
+	if strings.HasPrefix(choice, "Review Staged Changes") {
 		m.state = stateReviewing
+		m.reviewMode = reviewStaged
 		m.spinner = spinner.New()
 		m.spinner.Spinner = spinner.Dot
 		m.spinner.Style = spinnerStyle
 		return m, tea.Batch(m.spinner.Tick, m.runReviewCmd())
+	}
+
+	if strings.HasPrefix(choice, "Review All Files") {
+		m.state = stateReviewing
+		m.reviewMode = reviewAllFiles
+		m.spinner = spinner.New()
+		m.spinner.Spinner = spinner.Dot
+		m.spinner.Style = spinnerStyle
+		return m, tea.Batch(m.spinner.Tick, m.runReviewAllCmd())
 	}
 
 	if strings.HasPrefix(choice, "About") {
@@ -344,6 +363,42 @@ func (m *modelImpl) runReviewCmd() tea.Cmd {
 	}
 }
 
+func (m *modelImpl) runReviewAllCmd() tea.Cmd {
+	return func() tea.Msg {
+		root, err := scanRoot()
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		files, err := loadAllFiles(root)
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		if len(files) == 0 {
+			return reviewMsg{err: fmt.Errorf("no files found in repository")}
+		}
+		diff := fromFiles(files)
+		cfg, err := loadConfig("")
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		rules := allRulesFor(cfg)
+		report, err := engine.Review(diff, cfg, rules)
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		if cfg.Baseline.Path != "" {
+			baselineFile, err := baselineLoad(cfg.Baseline.Path)
+			if err != nil {
+				return reviewMsg{err: err}
+			}
+			report = baselineFilter(report, baselineFile)
+		}
+		score := riskCalculate(report.Summary)
+		report.Score = &model.Score{Value: score.Value, Rating: score.Rating}
+		return reviewMsg{report: report}
+	}
+}
+
 func (m *modelImpl) View() string {
 	if !m.ready {
 		return "Initializing..."
@@ -395,10 +450,17 @@ func (m *modelImpl) renderMenu() string {
 }
 
 func (m *modelImpl) renderReviewing() string {
+	var label string
+	if m.reviewMode == reviewAllFiles {
+		label = "Running security review on all files..."
+	} else {
+		label = "Running security review on staged changes..."
+	}
+
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("mavetis") + "  " + helpStyle.Render("reviewing..."))
 	b.WriteString("\n\n\n")
-	b.WriteString("   " + m.spinner.View() + " Running security review on staged changes...")
+	b.WriteString("   " + m.spinner.View() + " " + label)
 	return b.String()
 }
 

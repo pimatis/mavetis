@@ -94,13 +94,32 @@ func TestMenuArrowNavigation(t *testing.T) {
 	}
 }
 
-func TestMenuEnterRunReviewTransitionsToReviewing(t *testing.T) {
+func TestMenuEnterStagedReviewTransitionsToReviewing(t *testing.T) {
 	m := &modelImpl{state: stateMenu, menuCursor: 0}
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	after := updated.(*modelImpl)
 
 	if after.state != stateReviewing {
-		t.Errorf("expected state reviewing after selecting Run Review, got %v", after.state)
+		t.Errorf("expected state reviewing after selecting Review Staged Changes, got %v", after.state)
+	}
+	if after.reviewMode != reviewStaged {
+		t.Errorf("expected reviewStaged mode, got %v", after.reviewMode)
+	}
+	if cmd == nil {
+		t.Error("expected command for review")
+	}
+}
+
+func TestMenuEnterAllFilesReviewTransitionsToReviewing(t *testing.T) {
+	m := &modelImpl{state: stateMenu, menuCursor: 1}
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	after := updated.(*modelImpl)
+
+	if after.state != stateReviewing {
+		t.Errorf("expected state reviewing after selecting Review All Files, got %v", after.state)
+	}
+	if after.reviewMode != reviewAllFiles {
+		t.Errorf("expected reviewAllFiles mode, got %v", after.reviewMode)
 	}
 	if cmd == nil {
 		t.Error("expected command for review")
@@ -510,7 +529,7 @@ func TestIsTerminalNonTTY(t *testing.T) {
 }
 
 func TestMenuEnterAboutTransitionsToAbout(t *testing.T) {
-	m := &modelImpl{state: stateMenu, menuCursor: 1}
+	m := &modelImpl{state: stateMenu, menuCursor: 2}
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	after := updated.(*modelImpl)
 

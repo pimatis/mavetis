@@ -7,6 +7,7 @@ import (
 	"github.com/Pimatis/mavetis/src/model"
 	"github.com/Pimatis/mavetis/src/risk"
 	"github.com/Pimatis/mavetis/src/rule"
+	"github.com/Pimatis/mavetis/src/scan"
 )
 
 func diffParse(raw string, meta model.DiffMeta) (model.Diff, error) {
@@ -31,4 +32,16 @@ func baselineFilter(report model.Report, file baseline.File) model.Report {
 
 func riskCalculate(summary model.Summary) risk.Score {
 	return risk.Calculate(summary)
+}
+
+func scanRoot() (string, error) {
+	return scan.Root()
+}
+
+func loadAllFiles(root string) ([]scan.ScannedFile, error) {
+	return scan.LoadAllFiles(root)
+}
+
+func fromFiles(files []scan.ScannedFile) model.Diff {
+	return scan.FromFiles(files)
 }
