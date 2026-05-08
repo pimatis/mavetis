@@ -114,5 +114,14 @@ func Filter(report model.Report, baseline File) model.Report {
 		filtered = append(filtered, f)
 	}
 	report.Findings = filtered
+	report.Summary = summarize(report.Summary.Files, filtered)
 	return report
+}
+
+func summarize(files int, findings []model.Finding) model.Summary {
+	summary := model.Summary{Files: files}
+	for _, finding := range findings {
+		summary.Add(finding)
+	}
+	return summary
 }

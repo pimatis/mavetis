@@ -109,10 +109,11 @@ func TestCreateSortsEntries(t *testing.T) {
 
 func TestFilterRemovesKnown(t *testing.T) {
 	report := model.Report{
+		Summary: model.Summary{Files: 3, Findings: 3, Critical: 1, High: 1, Low: 1},
 		Findings: []model.Finding{
-			{RuleID: "a", Path: "x.go", Line: 1},
-			{RuleID: "b", Path: "y.go", Line: 2},
-			{RuleID: "c", Path: "z.go", Line: 3},
+			{RuleID: "a", Path: "x.go", Line: 1, Severity: "critical"},
+			{RuleID: "b", Path: "y.go", Line: 2, Severity: "high"},
+			{RuleID: "c", Path: "z.go", Line: 3, Severity: "low"},
 		},
 	}
 	baseline := File{
@@ -127,6 +128,9 @@ func TestFilterRemovesKnown(t *testing.T) {
 	}
 	if filtered.Findings[0].RuleID != "b" {
 		t.Fatalf("expected rule b remaining, got %s", filtered.Findings[0].RuleID)
+	}
+	if filtered.Summary.Files != 3 || filtered.Summary.Findings != 1 || filtered.Summary.High != 1 {
+		t.Fatalf("expected recomputed summary, got %#v", filtered.Summary)
 	}
 }
 
