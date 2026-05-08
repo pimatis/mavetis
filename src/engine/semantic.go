@@ -13,8 +13,8 @@ import (
 var fetchSink = regexp.MustCompile(`(?i)(fetch\(|http\.Get\(|http\.Post\(|axios\.|requests\.(get|post)|urlopen\()`)
 var execSink = regexp.MustCompile(`(?i)(exec\(|spawn\(|system\(|subprocess\.|sh\s+-c|bash\s+-c)`)
 var pathSink = regexp.MustCompile(`(?i)(ReadFile|WriteFile|os\.Open|os\.OpenFile|filepath\.Join|path\.Join|os\.Create)`)
-var sqlSink = regexp.MustCompile(`(?i)(select\b.+\bfrom\b|insert\b.+\binto\b|update\b.+\bset\b|delete\b.+\bfrom\b|fmt\.sprint|sprintf|\+)`)
-var lookupSink = regexp.MustCompile(`(?i)(find|first|getby|get\(|load|select|delete|update)`)
+var sqlSink = regexp.MustCompile(`(?i)(select\b.+\bfrom\b|insert\b.+\binto\b|update\b.+\bset\b|delete\b.+\bfrom\b|fmt\.sprint|sprintf)`)
+var lookupSink = regexp.MustCompile(`(?i)(\bfind\b|\bfirst\b|getby|get\(|\bload\b|\bselect\b|\bdelete\b|\bupdate\b)`)
 var templateSink = regexp.MustCompile(`(?i)(template\.New|template\.Parse|ParseFiles\(|ParseGlob\(|ParseFS\(|render_template_string|Handlebars\.compile|ejs\.render|eval\(|new Function\()`)
 
 func semanticFindings(diff model.Diff) []model.Finding {

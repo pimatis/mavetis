@@ -14,7 +14,7 @@ func ai() []model.Rule {
 			Confidence:  "high",
 			Target:      "added",
 			Paths:       codeFiles(),
-			Require:     []string{`(?i)(prompt|messages|system|user|assistant|chat\.completions|generateContent).*(api[_-]?key|secret|password|token|authorization|cookie|privateKey|process\.env)`},
+			Require:     []string{`(?i)(\bprompt\b|\bmessages\b|\bsystem\b|\buser\b|\bassistant\b|chat\.completions|generateContent).*(api[_-]?key|secret|password|token|authorization|cookie|privateKey|process\.env)`},
 			Standards:   standard("OWASP-ASVS-V8.1", "OWASP-LLM01", "OWASP-LLM06"),
 			Mask:        true,
 		},
