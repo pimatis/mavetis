@@ -91,5 +91,8 @@ func ReviewArtifact(path string) bool {
 	if strings.Contains(normalized, "/src/analyze/") || strings.HasPrefix(normalized, "src/analyze/") {
 		return true
 	}
+	if strings.Contains(normalized, "/src/tui/") || strings.HasPrefix(normalized, "src/tui/") {
+		return true
+	}
 	return false
 }

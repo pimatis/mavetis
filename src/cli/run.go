@@ -22,11 +22,18 @@ import (
 	"github.com/Pimatis/mavetis/src/resolve"
 	"github.com/Pimatis/mavetis/src/risk"
 	"github.com/Pimatis/mavetis/src/scan"
+	"github.com/Pimatis/mavetis/src/tui"
 )
 
 func Execute(arguments []string) int {
 	if len(arguments) == 0 {
-		usage()
+		if err := tui.Run(); err != nil {
+			if errors.Is(err, tui.ErrNoTerminal) {
+				usage()
+				return 0
+			}
+			return fail(err)
+		}
 		return 0
 	}
 	command := arguments[0]
