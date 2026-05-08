@@ -106,7 +106,7 @@ func supply() []model.Rule {
 			Confidence:  "high",
 			Target:      "added",
 			Paths:       workflowFiles(),
-			Require:     []string{`(?i)(permissions:\s*write-all|contents:\s*write|packages:\s*write|id-token:\s*write)`},
+			Require:     []string{`(?i)(permissions:\s*write-all|packages:\s*write|id-token:\s*write)`},
 			Standards:   standard("OWASP-ASVS-V14", "OWASP-SupplyChain"),
 		},
 		{

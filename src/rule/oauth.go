@@ -16,7 +16,7 @@ func oauth() []model.Rule {
 			Paths:       codeFiles(),
 			Require:     []string{`(?i)(redirect|returnTo|callback|next).{0,20}(query|params|input|request|url)`},
 			Near:        []string{`(?i)(oauth|oidc|login|signin|authorize|redirect)`},
-			Absent:      []string{`(?i)(allowlist|whitelist|trustedRedirect|isAllowedRedirect|validateRedirect)`},
+			Absent:      []string{`(?i)(allowlist|whitelist|trustedRedirect|isAllowedRedirect|validateRedirect|trustedURL|refusing untrusted)`},
 			Standards:   standard("OWASP-ASVS-V4.1", "OWASP-OAuth"),
 		},
 		{

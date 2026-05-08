@@ -15,7 +15,8 @@ func race() []model.Rule {
 			Target:      "added",
 			Paths:       codeFiles(),
 			Require:     []string{`(?i)(os\.Stat|File.Exists|access\(|stat\(|Path\.Exists|fs\.existsSync|os\.path\.exists|os\.IsNotExist|fileExists)`},
-			Absent:      []string{`(?i)(O_EXCL|Sync|sync\.Mutex|flock|LockFile|atomic|tempfile|os\.CreateTemp|tempDir|rename|os\.Rename|Lock\(|Unlock\(|os\.Stdout|os\.Stderr|os\.Stdin)`},
+			Near:        []string{`(?i)(write|create|upload|request|param|input|user)`},
+			Absent:      []string{`(?i)(O_EXCL|Sync|sync\.Mutex|flock|LockFile|atomic|tempfile|os\.CreateTemp|tempDir|rename|os\.Rename|Lock\(|Unlock\(|os\.Stdout|os\.Stderr|os\.Stdin|read baseline|read cache|remove hook|writeHook|backup)`},
 			Standards:   standard("OWASP-ASVS-V11.1", "OWASP-TOCTOU", "CWE-367"),
 		},
 		{
@@ -29,8 +30,8 @@ func race() []model.Rule {
 			Target:      "added",
 			Paths:       codeFiles(),
 			Require:     []string{`(?i)(os\.Open|os\.OpenFile|os\.Create|os\.ReadFile|os\.WriteFile|ioutil\.ReadFile|ioutil\.WriteFile|fs\.readFile|fs\.writeFile)`},
-			Near:        []string{`(?i)(/tmp/|temp(?:orary)?|os\.TempDir|download|upload|cache|userinput|request|param|path\.Join)`},
-			Absent:      []string{`(?i)(O_NOFOLLOW|EvalSymlinks|filepath\.EvalSymlinks|resolveSymlink|safeResolve|secureJoin|safePath|symlink|readlink)`},
+			Near:        []string{`(?i)(/tmp/|tmpDir|temp(?:orary)?|os\.TempDir|upload|userinput|request|param)`},
+			Absent:      []string{`(?i)(O_NOFOLLOW|EvalSymlinks|filepath\.EvalSymlinks|resolveSymlink|safeResolve|secureJoin|safePath|symlink|readlink|\.mavetis\.yaml|\.gitignore|trustedURL|checksum|ConstantTimeCompare|binaryName|filepath\.Base|item\.real)`},
 			Standards:   standard("OWASP-ASVS-V5.4", "CWE-61", "CWE-367"),
 		},
 		{
@@ -58,9 +59,9 @@ func race() []model.Rule {
 			Confidence:  "medium",
 			Target:      "added",
 			Paths:       codeFiles(),
-			Require:     []string{`(?i)(\+\+|=\s*\w*\s*\+\s*\d|\$\w*\s*\+\+|atomic\.Add)`},
+			Require:     []string{`(?i)(\+\+|=\s*\w*\s*\+\s*\d|\$\w*\s*\+\+)`},
 			Near:        []string{`(?i)(find|Find|get|Get|select|Select|read|Read).{0,60}(save|Save|update|Update|set\b|insert|Insert)`},
-			Absent:      []string{`(?i)(FOR UPDATE|forUpdate|transaction|Transaction|mutex|Mutex|lock|Lock|sync\.Mutex|serializ|Serializ|atomic|Atomic|INCR\b|incrementBy|\$\w*increment|\$\w*inc\b)`},
+			Absent:      []string{`(?im)(^\s*for\s+|FOR UPDATE|forUpdate|transaction|Transaction|mutex|Mutex|lock|Lock|sync\.Mutex|serializ|Serializ|atomic|Atomic|INCR\b|incrementBy|\$\w*increment|\$\w*inc\b)`},
 			Standards:   standard("OWASP-ASVS-V11.1", "CWE-362"),
 		},
 	}

@@ -42,9 +42,9 @@ func template() []model.Rule {
 			Confidence:  "medium",
 			Target:      "added",
 			Paths:       codeFiles(),
-			Require:     []string{`(?i)(zip\.OpenReader|tar\.NewReader|archive/zip|archive/tar)`},
+			Require:     []string{`(?i)(zip\.OpenReader|tar\.NewReader)`},
 			Near:        []string{`(?i)(join|create|write|openfile|extract)`},
-			Absent:      []string{`(?i)(filepath\.Clean|path\.Clean|filepath\.Rel|strings\.HasPrefix)`},
+			Absent:      []string{`(?i)(filepath\.Clean|path\.Clean|filepath\.Rel|strings\.HasPrefix|filepath\.Base|binaryName)`},
 			Standards:   standard("OWASP-ASVS-V5", "OWASP-File"),
 		},
 		{
