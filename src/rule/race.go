@@ -1,0 +1,67 @@
+package rule
+
+import "github.com/Pimatis/mavetis/src/model"
+
+func race() []model.Rule {
+	return []model.Rule{
+		{
+			ID:          "race.file.toctou",
+			Title:       "File existence check before write or use without atomic guard",
+			Message:     "The diff checks file existence or metadata before a subsequent write, open, or remove operation without an atomic guard.",
+			Remediation: "Use atomic filesystem operations such as O_CREATE|O_EXCL, rename-based writes, or advisory file locks instead of separate check-then-act sequences.",
+			Category:    "race",
+			Severity:    "high",
+			Confidence:  "medium",
+			Target:      "added",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(os\.Stat|File.Exists|access\(|stat\(|Path\.Exists|fs\.existsSync|os\.path\.exists|os\.IsNotExist|fileExists)`},
+			Absent:      []string{`(?i)(O_EXCL|Sync|sync\.Mutex|flock|LockFile|atomic|tempfile|os\.CreateTemp|tempDir|rename|os\.Rename|Lock\(|Unlock\(|os\.Stdout|os\.Stderr|os\.Stdin)`},
+			Standards:   standard("OWASP-ASVS-V11.1", "OWASP-TOCTOU", "CWE-367"),
+		},
+		{
+			ID:          "race.file.link.toctou",
+			Title:       "File path used without symlink or hardlink protection",
+			Message:     "The diff opens, reads, or writes a file path that may be a symlink or hardlink, enabling TOCTOU link-following attacks.",
+			Remediation: "Resolve symlinks, verify ownership of intermediate directories, or use O_NOFOLLOW and secure temporary directories.",
+			Category:    "race",
+			Severity:    "critical",
+			Confidence:  "medium",
+			Target:      "added",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(os\.Open|os\.OpenFile|os\.Create|os\.ReadFile|os\.WriteFile|ioutil\.ReadFile|ioutil\.WriteFile|fs\.readFile|fs\.writeFile)`},
+			Near:        []string{`(?i)(/tmp/|temp(?:orary)?|os\.TempDir|download|upload|cache|userinput|request|param|path\.Join)`},
+			Absent:      []string{`(?i)(O_NOFOLLOW|EvalSymlinks|filepath\.EvalSymlinks|resolveSymlink|safeResolve|secureJoin|safePath|symlink|readlink)`},
+			Standards:   standard("OWASP-ASVS-V5.4", "CWE-61", "CWE-367"),
+		},
+		{
+			ID:          "race.db.concurrent",
+			Title:       "Database read-modify-write without explicit locking",
+			Message:     "The diff performs a read-modify-write database sequence without an explicit lock, transaction isolation, or optimistic concurrency guard.",
+			Remediation: "Use SELECT FOR UPDATE, advisory locks, row versioning, or serializable transactions for critical read-modify-write flows.",
+			Category:    "race",
+			Severity:    "high",
+			Confidence:  "medium",
+			Target:      "added",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(select|Select|find|Find|get|Get|read|Read).*(update|Update|set|Set|save|Save|insert|Insert|upsert|Upsert)`},
+			Near:        []string{`(?i)(balance|inventory|stock|quota|quota|counter|credit|wallet)`},
+			Absent:      []string{`(?i)(FOR UPDATE|forUpdate|transaction|Transaction|serializ|Serializ|ROWVERSION|rowVersion|version|Version|optimistic|Optimistic|mutex|Mutex|lock|Lock|SELECT.*FOR)`},
+			Standards:   standard("OWASP-ASVS-V11.1", "CWE-362"),
+		},
+		{
+			ID:          "race.counter.increment",
+			Title:       "Non-atomic counter or value increment introduced",
+			Message:     "The diff introduces a counter, score, or numeric field update using read-then-increment-then-write without an atomic operation.",
+			Remediation: "Use atomic database increments such as UPDATE SET x = x + 1, Redis INCR, or server-side atomic counters instead of client-side read-modify-write.",
+			Category:    "race",
+			Severity:    "high",
+			Confidence:  "medium",
+			Target:      "added",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(\+\+|=\s*\w*\s*\+\s*\d|\$\w*\s*\+\+|atomic\.Add)`},
+			Near:        []string{`(?i)(find|Find|get|Get|select|Select|read|Read).{0,60}(save|Save|update|Update|set\b|insert|Insert)`},
+			Absent:      []string{`(?i)(FOR UPDATE|forUpdate|transaction|Transaction|mutex|Mutex|lock|Lock|sync\.Mutex|serializ|Serializ|atomic|Atomic|INCR\b|incrementBy|\$\w*increment|\$\w*inc\b)`},
+			Standards:   standard("OWASP-ASVS-V11.1", "CWE-362"),
+		},
+	}
+}

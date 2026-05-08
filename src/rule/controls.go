@@ -153,6 +153,15 @@ var controlMap = map[string][]string{
 	"iac.iam.policy.wildcard":              {"OWASP-ASVS-V14.4"},
 	"iac.securitygroup.open.ssh":           {"OWASP-ASVS-V14.4"},
 	"ai.prompt.secret.exposure":            {"OWASP-ASVS-V8.1"},
+	"websocket.origin.missing":             {"OWASP-ASVS-V4.1"},
+	"websocket.downgrade.missing":          {"OWASP-ASVS-V9.1", "OWASP-ASVS-V3.4"},
+	"websocket.message.validation.missing": {"OWASP-ASVS-V1.5", "OWASP-ASVS-V5.1"},
+	"websocket.auth.missing":               {"OWASP-ASVS-V3.1", "OWASP-ASVS-V4.1"},
+	"websocket.ratelimit.missing":          {"OWASP-ASVS-V7.2"},
+	"race.file.toctou":                     {"OWASP-ASVS-V11.1"},
+	"race.file.link.toctou":                {"OWASP-ASVS-V5.4"},
+	"race.db.concurrent":                  {"OWASP-ASVS-V11.1"},
+	"race.counter.increment":              {"OWASP-ASVS-V11.1"},
 }
 
 func enrichControls(rules []model.Rule) []model.Rule {
