@@ -67,6 +67,15 @@ func TestBuiltinsExposeExpandedFamilies(t *testing.T) {
 		"ai.prompt.secret.exposure",
 		"ai.prompt.user.system.mix",
 		"ai.tool.untrusted.input",
+		"websocket.origin.missing",
+		"websocket.downgrade.missing",
+		"websocket.message.validation.missing",
+		"websocket.auth.missing",
+		"websocket.ratelimit.missing",
+		"race.file.toctou",
+		"race.file.link.toctou",
+		"race.db.concurrent",
+		"race.counter.increment",
 	}
 	for _, id := range expected {
 		if !contains(rules, id) {

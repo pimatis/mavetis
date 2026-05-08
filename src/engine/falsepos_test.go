@@ -84,3 +84,146 @@ func TestTemplateRuleDoesNotFlagGenericFlagParsing(t *testing.T) {
 		}
 	}
 }
+
+func TestGoImportDoesNotTriggerLfi(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "src/tui/styles.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{
+				{Kind: "added", Text: `import (`, NewNumber: 1},
+				{Kind: "added", Text: `	"github.com/charmbracelet/lipgloss"`, NewNumber: 2},
+				{Kind: "added", Text: `)`, NewNumber: 3},
+			},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "inject.lfi" {
+			t.Fatalf("unexpected LFI finding on Go import: %#v", finding)
+		}
+	}
+}
+
+func TestStringConcatDoesNotTriggerSqlSink(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "app.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{
+				{Kind: "added", Text: `body := padding + content`, NewNumber: 1},
+				{Kind: "added", Text: `body = body + "\n" + footer`, NewNumber: 2},
+			},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "semantic.sql.flow" {
+			t.Fatalf("unexpected SQL sink finding on string concat: %#v", finding)
+		}
+	}
+}
+
+func TestStdoutStatDoesNotTriggerToctou(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "app.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{
+				{Kind: "added", Text: `info, err := os.Stdout.Stat()`, NewNumber: 1},
+			},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "race.file.toctou" {
+			t.Fatalf("unexpected TOCTOU finding on os.Stdout.Stat: %#v", finding)
+		}
+	}
+}
+
+func TestHelpTextDoesNotTriggerAiSecret(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "app.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{
+				{Kind: "added", Text: `"secrets scan       full filesystem secret scan"`, NewNumber: 1},
+			},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "ai.prompt.secret.exposure" {
+			t.Fatalf("unexpected AI secret finding on help text: %#v", finding)
+		}
+	}
+}
+
+func TestLookupSinkDoesNotMatchSetContent(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "app.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{
+				{Kind: "added", Text: `m.viewport.SetContent(m.renderFindingsList())`, NewNumber: 1},
+			},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "semantic.idor.flow" {
+			t.Fatalf("unexpected IDOR finding on SetContent: %#v", finding)
+		}
+	}
+}
+
+func TestLocalLocationVariableDoesNotTriggerOpenRedirect(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "app.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{
+				{Kind: "added", Text: `location := findingPathStyle.Render(f.Path) + findingLineStyle.Render(fmt.Sprintf(":%d", f.Line))`, NewNumber: 1},
+			},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "inject.openredirect" {
+			t.Fatalf("unexpected open redirect finding on local location variable: %#v", finding)
+		}
+	}
+}
+
+func TestTuiFilesSkippedByReviewArtifact(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "src/tui/tui.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{
+				{Kind: "added", Text: `m.viewport.SetContent(m.renderFindingsList())`, NewNumber: 1},
+			},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "semantic.idor.flow" || finding.RuleID == "semantic.sql.flow" {
+			t.Fatalf("unexpected semantic finding on TUI file: %#v", finding)
+		}
+	}
+}
