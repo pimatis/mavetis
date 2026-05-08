@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	maxExplicitFiles    = 128
+	maxExplicitFiles    = 20000
 	maxExplicitFileSize = 1 << 20
 )
 
@@ -121,11 +121,21 @@ func expandTargets(root string, target string) ([]string, error) {
 		base = filepath.Dir(base)
 	}
 	matches := make([]string, 0)
+	ignorePatterns := LoadGitignorePatterns(root)
 	err = filepath.WalkDir(base, func(path string, item fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
 		if item.IsDir() {
+			if path != base && skipWalkDir(item.Name()) {
+				return filepath.SkipDir
+			}
+			if path != base {
+				relDir, relErr := filepath.Rel(root, path)
+				if relErr == nil && IsGitignored(ignorePatterns, relDir) {
+					return filepath.SkipDir
+				}
+			}
 			return nil
 		}
 		rel, err := filepath.Rel(root, path)
@@ -133,6 +143,9 @@ func expandTargets(root string, target string) ([]string, error) {
 			return err
 		}
 		if outsideRoot(rel) {
+			return nil
+		}
+		if IsGitignored(ignorePatterns, filepath.ToSlash(rel)) {
 			return nil
 		}
 		if !match.Glob(pattern, filepath.ToSlash(rel)) {
@@ -179,6 +192,7 @@ func expandDirectoryTarget(root string, target string) ([]string, bool, error) {
 		return nil, false, fmt.Errorf("review target escapes repository root: %s", target)
 	}
 	matches := make([]string, 0)
+	ignorePatterns := LoadGitignorePatterns(root)
 	err = filepath.WalkDir(real, func(path string, item fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -187,6 +201,12 @@ func expandDirectoryTarget(root string, target string) ([]string, bool, error) {
 			if path != real && skipWalkDir(item.Name()) {
 				return filepath.SkipDir
 			}
+			if path != real {
+				relDir, relErr := filepath.Rel(root, path)
+				if relErr == nil && IsGitignored(ignorePatterns, relDir) {
+					return filepath.SkipDir
+				}
+			}
 			return nil
 		}
 		relPath, err := filepath.Rel(root, path)
@@ -194,6 +214,9 @@ func expandDirectoryTarget(root string, target string) ([]string, bool, error) {
 			return err
 		}
 		if outsideRoot(relPath) {
+			return nil
+		}
+		if IsGitignored(ignorePatterns, relPath) {
 			return nil
 		}
 		matches = append(matches, path)
@@ -292,4 +315,58 @@ func outsideRoot(rel string) bool {
 		return true
 	}
 	return strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+func LoadAllFiles(root string) ([]ScannedFile, error) {
+	rootReal, err := realPath(root)
+	if err != nil {
+		return nil, err
+	}
+	ignorePatterns := LoadGitignorePatterns(rootReal)
+	files := make([]ScannedFile, 0)
+	seen := map[string]struct{}{}
+	err = filepath.WalkDir(rootReal, func(path string, item fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if item.IsDir() {
+			if path != rootReal && skipWalkDir(item.Name()) {
+				return filepath.SkipDir
+			}
+			if path != rootReal {
+				relDir, relErr := filepath.Rel(rootReal, path)
+				if relErr == nil && IsGitignored(ignorePatterns, relDir) {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}
+		relPath, relErr := filepath.Rel(rootReal, path)
+		if relErr != nil {
+			return relErr
+		}
+		if outsideRoot(relPath) {
+			return nil
+		}
+		if IsGitignored(ignorePatterns, relPath) {
+			return nil
+		}
+		file, real, loadErr := loadFile(rootReal, path)
+		if loadErr != nil {
+			return nil
+		}
+		if _, ok := seen[real]; ok {
+			return nil
+		}
+		seen[real] = struct{}{}
+		files = append(files, file)
+		if len(files) > maxExplicitFiles {
+			return fmt.Errorf("too many @file targets: max %d", maxExplicitFiles)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
 }

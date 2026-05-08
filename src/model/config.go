@@ -73,6 +73,7 @@ type Review struct {
 	WithContext   bool
 	WithSuggested bool
 	StdinTargets  bool
+	All           bool
 	BaselinePath  string
 	CachePath     string
 	NoCache       bool

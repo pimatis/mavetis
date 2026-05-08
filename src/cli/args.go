@@ -10,7 +10,7 @@ import (
 	"github.com/Pimatis/mavetis/src/model"
 )
 
-const maxFileTargets = 128
+	const maxFileTargets = 20000
 
 func parseReview(arguments []string, ci bool) (model.Review, error) {
 	spec := model.Review{}
@@ -39,6 +39,7 @@ func parseReview(arguments []string, ci bool) (model.Review, error) {
 	flags.BoolVar(&spec.WithSuggested, "with-suggested", false, "Review bounded suggested local dependencies together with the requested files")
 	flags.BoolVar(&spec.WithSuggested, "follow-imports", false, "Review bounded suggested local dependencies together with the requested files")
 	flags.BoolVar(&spec.StdinTargets, "stdin-targets", false, "Read newline-separated review targets from stdin")
+	flags.BoolVar(&spec.All, "all", false, "Review all files in the repository")
 	if err := flags.Parse(flagArguments); err != nil {
 		return spec, err
 	}
@@ -72,6 +73,19 @@ func parseReview(arguments []string, ci bool) (model.Review, error) {
 	if ci {
 		spec.Base = defaultBase(spec.Base)
 		spec.Mode = "ci"
+	}
+	if spec.All {
+		if len(spec.Files) != 0 {
+			return spec, errors.New("--all cannot be combined with @file targets")
+		}
+		if ci {
+			return spec, errors.New("ci mode does not support --all")
+		}
+		if spec.Staged || spec.Base != "" || spec.Head != "" {
+			return spec, errors.New("--all cannot be combined with --staged, --base, or --head")
+		}
+		spec.Mode = "file"
+		return spec, nil
 	}
 	if len(spec.Files) != 0 {
 		if ci {
@@ -135,6 +149,7 @@ func splitReviewArguments(arguments []string) ([]string, []string, error) {
 		"--with-suggested":       {},
 		"--follow-imports":       {},
 		"--stdin-targets":        {},
+		"--all":                  {},
 	}
 	consumeFiles := false
 	for index := 0; index < len(arguments); index++ {
@@ -215,6 +230,7 @@ func helpMessage() string {
   review --staged [--path src/**] [--profile auth] [--with-context] [--explain] [--baseline .mavetis-baseline.yaml]
   review --base main [--path src/**] [--profile backend] [--with-context] [--baseline .mavetis-baseline.yaml]
   review src/file.go [--with-suggested] [--format json] [--cache .mavetis-review-cache.json]
+  review --all [--path src/**] [--profile auth] [--explain] [--format json]
   ci --base main [--path src/**] [--profile fintech] [--with-context] [--baseline .mavetis-baseline.yaml]
   init [--default] [--force]
   baseline --create [--output .mavetis-baseline.yaml] [--base main]
@@ -243,6 +259,10 @@ file review:
   mavetis review src/scan/load.go --with-suggested
   mavetis review src --cache .mavetis-review-cache.json
   mavetis review src --no-cache
+  mavetis review --all --explain
+  mavetis review --all --path 'src/**' --severity high
+  mavetis review --all --cache .mavetis-review-cache.json
+  mavetis review --all --profile auth --format json
 
 secrets scan:
   mavetis secrets scan
@@ -256,6 +276,8 @@ examples:
   mavetis review --staged --path 'src/**' --profile auth --with-context --explain
   mavetis review --base main --path 'src/**' --profile backend --with-context --baseline .mavetis-baseline.yaml
   mavetis review src/scan/load.go --with-suggested
+  mavetis review --all --explain
+  mavetis review --all --path 'src/**' --profile auth
   mavetis ci --base main --format json --profile fintech --with-context --baseline .mavetis-baseline.yaml
   mavetis init
   mavetis init --force

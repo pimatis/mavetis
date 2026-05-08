@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Pimatis/mavetis/src/match"
+	"github.com/Pimatis/mavetis/src/scan"
 )
 
 const (
@@ -97,6 +98,7 @@ func collectTarget(root string, target string) ([]file, error) {
 
 func walk(root string, directory string) ([]file, error) {
 	files := make([]file, 0)
+	ignorePatterns := scan.LoadGitignorePatterns(root)
 	err := filepath.WalkDir(directory, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -104,6 +106,12 @@ func walk(root string, directory string) ([]file, error) {
 		if entry.IsDir() {
 			if path != directory && skipDir(entry.Name()) {
 				return filepath.SkipDir
+			}
+			if path != directory {
+				relDir, relErr := filepath.Rel(root, path)
+				if relErr == nil && scan.IsGitignored(ignorePatterns, relDir) {
+					return filepath.SkipDir
+				}
 			}
 			return nil
 		}
@@ -126,6 +134,9 @@ func walk(root string, directory string) ([]file, error) {
 			return err
 		}
 		if outsideRoot(rel) {
+			return nil
+		}
+		if scan.IsGitignored(ignorePatterns, rel) {
 			return nil
 		}
 		files = append(files, file{path: filepath.ToSlash(rel), real: real, size: info.Size(), modTime: info.ModTime().UnixNano()})

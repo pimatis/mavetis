@@ -117,6 +117,9 @@ func prepareReview(arguments []string, ci bool) (model.Review, model.Config, []m
 }
 
 func buildReport(spec model.Review, cfg model.Config, rules []model.Rule) (model.Report, error) {
+	if spec.All {
+		return buildAllReport(spec, cfg, rules)
+	}
 	if len(spec.Files) != 0 {
 		return buildFileReport(spec, cfg, rules)
 	}
@@ -188,6 +191,27 @@ func buildFileReport(spec model.Review, cfg model.Config, rules []model.Rule) (m
 	report.Suggestions = suggestions
 	if len(suggestions) != 0 && !spec.WithSuggested {
 		report.SuggestedCommand = suggestedCommand(spec)
+	}
+	return report, nil
+}
+
+func buildAllReport(spec model.Review, cfg model.Config, rules []model.Rule) (model.Report, error) {
+	root, err := scan.Root()
+	if err != nil {
+		return model.Report{}, err
+	}
+	files, err := scan.LoadAllFiles(root)
+	if err != nil {
+		return model.Report{}, err
+	}
+	files = filterScannedFiles(files, spec.Path)
+	report, err := reviewScannedFiles(root, files, spec, cfg, rules)
+	if err != nil {
+		return model.Report{}, err
+	}
+	report.Meta.Mode = "file:all"
+	if spec.Path != "" {
+		report.Meta.Mode = report.Meta.Mode + ":" + spec.Path
 	}
 	return report, nil
 }

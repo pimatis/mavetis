@@ -212,3 +212,64 @@ func TestParseReviewRejectsEmptyAtTarget(t *testing.T) {
 		t.Fatal("expected empty target rejection")
 	}
 }
+
+func TestParseReviewSupportsAllFlag(t *testing.T) {
+	spec, err := parseReview([]string{"--all"}, false)
+	if err != nil {
+		t.Fatalf("parse review: %v", err)
+	}
+	if !spec.All {
+		t.Fatalf("expected all flag: %#v", spec)
+	}
+	if spec.Mode != "file" {
+		t.Fatalf("unexpected mode: %s", spec.Mode)
+	}
+}
+
+func TestParseReviewAllRejectsFileTargets(t *testing.T) {
+	_, err := parseReview([]string{"--all", "src/app.go"}, false)
+	if err == nil {
+		t.Fatal("expected all + file targets rejection")
+	}
+}
+
+func TestParseReviewAllRejectsStaged(t *testing.T) {
+	_, err := parseReview([]string{"--all", "--staged"}, false)
+	if err == nil {
+		t.Fatal("expected all + staged rejection")
+	}
+}
+
+func TestParseReviewAllRejectsBase(t *testing.T) {
+	_, err := parseReview([]string{"--all", "--base", "main"}, false)
+	if err == nil {
+		t.Fatal("expected all + base rejection")
+	}
+}
+
+func TestParseReviewAllRejectsCI(t *testing.T) {
+	_, err := parseReview([]string{"--all"}, true)
+	if err == nil {
+		t.Fatal("expected all + ci rejection")
+	}
+}
+
+func TestParseReviewAllWithPath(t *testing.T) {
+	spec, err := parseReview([]string{"--all", "--path", "src/**"}, false)
+	if err != nil {
+		t.Fatalf("parse review: %v", err)
+	}
+	if !spec.All || spec.Path != "src/**" {
+		t.Fatalf("unexpected spec: %#v", spec)
+	}
+}
+
+func TestParseReviewAllWithProfile(t *testing.T) {
+	spec, err := parseReview([]string{"--all", "--profile", "auth"}, false)
+	if err != nil {
+		t.Fatalf("parse review: %v", err)
+	}
+	if !spec.All || spec.Profile != "auth" {
+		t.Fatalf("unexpected spec: %#v", spec)
+	}
+}
