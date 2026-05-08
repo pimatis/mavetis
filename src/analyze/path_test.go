@@ -18,6 +18,9 @@ func TestPathHelpers(t *testing.T) {
 	if !ReviewArtifact("src/rule/auth.go") {
 		t.Fatal("expected detector rule source to stay excluded from self-review")
 	}
+	if !ReviewArtifact("src/engine/review.go") {
+		t.Fatal("expected review engine source to stay excluded from self-review")
+	}
 	if Language("app.ts") != "typescript" {
 		t.Fatal("expected typescript language")
 	}
