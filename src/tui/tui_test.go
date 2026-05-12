@@ -529,7 +529,7 @@ func TestIsTerminalNonTTY(t *testing.T) {
 }
 
 func TestMenuEnterAboutTransitionsToAbout(t *testing.T) {
-	m := &modelImpl{state: stateMenu, menuCursor: 2}
+	m := &modelImpl{state: stateMenu, menuCursor: 6}
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	after := updated.(*modelImpl)
 

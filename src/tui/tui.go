@@ -9,6 +9,7 @@ import (
 	"github.com/Pimatis/mavetis/src/engine"
 	"github.com/Pimatis/mavetis/src/git"
 	"github.com/Pimatis/mavetis/src/model"
+	"github.com/Pimatis/mavetis/src/wizard"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -24,6 +25,14 @@ const (
 	stateFindings
 	stateDetail
 	stateAbout
+	stateSecretsScanning
+	stateSecretsFindings
+	stateBaselineScanning
+	stateBaselineDone
+	stateRuleList
+	stateRuleDetail
+	stateWizard
+	stateWizardDone
 )
 
 type reviewMode int
@@ -31,6 +40,9 @@ type reviewMode int
 const (
 	reviewStaged reviewMode = iota
 	reviewAllFiles
+	reviewSecrets
+	reviewBaseline
+	reviewWizard
 )
 
 type reviewMsg struct {
@@ -60,11 +72,29 @@ type modelImpl struct {
 	// Detail
 	detailViewport viewport.Model
 	detailIndex    int
+
+	// Rules
+	ruleList   []model.RuleInfo
+	ruleCursor int
+	ruleDetail string
+
+	// Wizard
+	wizardProject wizard.Project
+	wizardDone    bool
+	wizardPath    string
+
+	// Baseline
+	baselinePath string
+	baselineDone bool
 }
 
 var menuItems = []string{
 	"Review Staged Changes",
 	"Review All Files",
+	"Secrets Scan",
+	"Create Baseline",
+	"Rule Explain",
+	"Config Wizard",
 	"About",
 	"Quit",
 }
@@ -106,16 +136,31 @@ func (m *modelImpl) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case reviewMsg:
-		m.state = stateFindings
 		if msg.err != nil {
 			m.reviewErr = msg.err
 			m.state = stateMenu
+			return m, nil
+		}
+		if m.state == stateBaselineScanning {
+			if err := baselineCreate(".mavetis-baseline.yaml", msg.report); err != nil {
+				m.reviewErr = err
+				m.state = stateMenu
+				return m, nil
+			}
+			m.baselinePath = ".mavetis-baseline.yaml"
+			m.baselineDone = true
+			m.state = stateBaselineDone
 			return m, nil
 		}
 		m.report = &msg.report
 		m.findingsCursor = 0
 		m.viewport.SetContent(m.renderFindingsList())
 		m.viewport.GotoTop()
+		if m.state == stateReviewing {
+			m.state = stateFindings
+		} else if m.state == stateSecretsScanning {
+			m.state = stateSecretsFindings
+		}
 		return m, nil
 	}
 
@@ -127,11 +172,23 @@ func (m *modelImpl) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.state == stateDetail {
 		return m.handleDetailKey(msg)
 	}
-	if m.state == stateFindings {
+	if m.state == stateFindings || m.state == stateSecretsFindings {
 		return m.handleFindingsKey(msg)
 	}
 	if m.state == stateAbout {
 		return m.handleAboutKey(msg)
+	}
+	if m.state == stateRuleList {
+		return m.handleRuleListKey(msg)
+	}
+	if m.state == stateRuleDetail {
+		return m.handleRuleDetailKey(msg)
+	}
+	if m.state == stateBaselineDone || m.state == stateWizardDone {
+		return m.handleDoneKey(msg)
+	}
+	if m.state == stateWizard {
+		return m.handleWizardKey(msg)
 	}
 	return m.handleMenuKey(msg)
 }
@@ -179,6 +236,50 @@ func (m *modelImpl) handleMenuSelect() (tea.Model, tea.Cmd) {
 		m.spinner.Spinner = spinner.Dot
 		m.spinner.Style = spinnerStyle
 		return m, tea.Batch(m.spinner.Tick, m.runReviewAllCmd())
+	}
+
+	if strings.HasPrefix(choice, "Secrets Scan") {
+		m.state = stateSecretsScanning
+		m.reviewMode = reviewSecrets
+		m.spinner = spinner.New()
+		m.spinner.Spinner = spinner.Dot
+		m.spinner.Style = spinnerStyle
+		return m, tea.Batch(m.spinner.Tick, m.runSecretsScanCmd())
+	}
+
+	if strings.HasPrefix(choice, "Create Baseline") {
+		m.state = stateBaselineScanning
+		m.reviewMode = reviewBaseline
+		m.spinner = spinner.New()
+		m.spinner.Spinner = spinner.Dot
+		m.spinner.Style = spinnerStyle
+		return m, tea.Batch(m.spinner.Tick, m.runBaselineScanCmd())
+	}
+
+	if strings.HasPrefix(choice, "Rule Explain") {
+		cfg, err := loadConfig("")
+		if err != nil {
+			m.reviewErr = err
+			return m, nil
+		}
+		m.ruleList = ruleList(cfg)
+		m.ruleCursor = 0
+		m.state = stateRuleList
+		m.viewport.SetContent(m.renderRuleList())
+		m.viewport.GotoTop()
+		return m, nil
+	}
+
+	if strings.HasPrefix(choice, "Config Wizard") {
+		root, err := scanRoot()
+		if err != nil {
+			m.reviewErr = err
+			return m, nil
+		}
+		m.wizardProject = wizardDetect(root)
+		m.wizardDone = false
+		m.state = stateWizard
+		return m, nil
 	}
 
 	if strings.HasPrefix(choice, "About") {
@@ -308,6 +409,135 @@ func (m *modelImpl) handleAboutKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *modelImpl) handleRuleListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "esc", "b":
+		m.state = stateMenu
+		m.ruleList = nil
+		return m, nil
+
+	case "up", "k":
+		m.ruleCursor--
+		if m.ruleCursor < 0 {
+			m.ruleCursor = len(m.ruleList) - 1
+		}
+		m.viewport.SetContent(m.renderRuleList())
+
+	case "down", "j":
+		m.ruleCursor++
+		if m.ruleCursor >= len(m.ruleList) {
+			m.ruleCursor = 0
+		}
+		m.viewport.SetContent(m.renderRuleList())
+
+	case "enter":
+		if len(m.ruleList) == 0 {
+			return m, nil
+		}
+		cfg, err := loadConfig("")
+		if err != nil {
+			m.reviewErr = err
+			return m, nil
+		}
+		item := m.ruleList[m.ruleCursor]
+		explanation, ok := ruleExplain(item.ID, allRulesFor(cfg))
+		if !ok {
+			m.ruleDetail = "Rule not found: " + item.ID
+		} else {
+			m.ruleDetail = outputExplain(explanation)
+		}
+		m.state = stateRuleDetail
+		m.detailViewport.SetContent(m.ruleDetail)
+		m.detailViewport.GotoTop()
+		return m, nil
+
+	default:
+		var cmd tea.Cmd
+		m.viewport, cmd = m.viewport.Update(msg)
+		return m, cmd
+	}
+	return m, nil
+}
+
+func (m *modelImpl) handleRuleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "esc", "b":
+		m.state = stateRuleList
+		return m, nil
+
+	default:
+		var cmd tea.Cmd
+		m.detailViewport, cmd = m.detailViewport.Update(msg)
+		return m, cmd
+	}
+}
+
+func (m *modelImpl) handleDoneKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "esc", "b", "enter":
+		m.state = stateMenu
+		m.reviewErr = nil
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m *modelImpl) handleWizardKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+
+	case "esc", "b":
+		m.state = stateMenu
+		return m, nil
+
+	case "enter":
+		root, err := scanRoot()
+		if err != nil {
+			m.reviewErr = err
+			m.state = stateMenu
+			return m, nil
+		}
+		path := ".mavetis.yaml"
+		if _, err := os.Stat(path); err == nil {
+			m.reviewErr = fmt.Errorf("%s already exists; remove it first or use the CLI with --force", path)
+			m.state = stateMenu
+			return m, nil
+		}
+		project := wizardDetect(root)
+		template := wizard.ConfigTemplate{
+			Profile:    project.Profile,
+			Severity:   "low",
+			FailOn:     "high",
+			Output:     "text",
+			Ignore:     project.Ignore,
+			Critical:   project.Critical,
+			Restricted: project.Restricted,
+		}
+		content := wizardGenerate(template)
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			m.reviewErr = err
+			m.state = stateMenu
+			return m, nil
+		}
+		_ = appendGitignore(root, ".mavetis.yaml")
+		m.wizardPath = path
+		m.wizardDone = true
+		m.state = stateWizardDone
+		return m, nil
+	}
+	return m, nil
+}
+
 // fillScreen wraps content with vertical/horizontal padding to fill the terminal.
 func (m *modelImpl) fillScreen(content string, footer string) string {
 	contentLines := strings.Count(content, "\n") + 1
@@ -399,6 +629,55 @@ func (m *modelImpl) runReviewAllCmd() tea.Cmd {
 	}
 }
 
+func (m *modelImpl) runSecretsScanCmd() tea.Cmd {
+	return func() tea.Msg {
+		root, err := scanRoot()
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		cfg, err := loadConfig("")
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		report, err := secretScan(root, cfg)
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		score := riskCalculate(report.Summary)
+		report.Score = &model.Score{Value: score.Value, Rating: score.Rating}
+		return reviewMsg{report: report}
+	}
+}
+
+func (m *modelImpl) runBaselineScanCmd() tea.Cmd {
+	return func() tea.Msg {
+		root, err := scanRoot()
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		files, err := loadAllFiles(root)
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		if len(files) == 0 {
+			return reviewMsg{err: fmt.Errorf("no files found in repository")}
+		}
+		diff := fromFiles(files)
+		cfg, err := loadConfig("")
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		rules := allRulesFor(cfg)
+		report, err := engine.Review(diff, cfg, rules)
+		if err != nil {
+			return reviewMsg{err: err}
+		}
+		score := riskCalculate(report.Summary)
+		report.Score = &model.Score{Value: score.Value, Rating: score.Rating}
+		return reviewMsg{report: report}
+	}
+}
+
 func (m *modelImpl) View() string {
 	if !m.ready {
 		return "Initializing..."
@@ -408,15 +687,28 @@ func (m *modelImpl) View() string {
 	var footer string
 
 	switch m.state {
-	case stateReviewing:
+	case stateReviewing, stateSecretsScanning, stateBaselineScanning:
 		content = m.renderReviewing()
 		footer = ""
-	case stateFindings:
+	case stateFindings, stateSecretsFindings:
 		return m.renderFindings()
 	case stateDetail:
 		return m.renderDetailView()
 	case stateAbout:
 		content = m.renderAbout()
+		footer = helpStyle.Render("esc/b enter  back  q quit")
+	case stateRuleList:
+		return m.renderRuleListView()
+	case stateRuleDetail:
+		return m.renderRuleDetailView()
+	case stateBaselineDone:
+		content = m.renderBaselineDone()
+		footer = helpStyle.Render("esc/b enter  back  q quit")
+	case stateWizard:
+		content = m.renderWizard()
+		footer = helpStyle.Render("esc/b enter  back  q quit")
+	case stateWizardDone:
+		content = m.renderWizardDone()
 		footer = helpStyle.Render("esc/b enter  back  q quit")
 	default:
 		content = m.renderMenu()
@@ -451,9 +743,14 @@ func (m *modelImpl) renderMenu() string {
 
 func (m *modelImpl) renderReviewing() string {
 	var label string
-	if m.reviewMode == reviewAllFiles {
+	switch m.reviewMode {
+	case reviewAllFiles:
 		label = "Running security review on all files..."
-	} else {
+	case reviewSecrets:
+		label = "Scanning for secrets..."
+	case reviewBaseline:
+		label = "Creating baseline from all files..."
+	default:
 		label = "Running security review on staged changes..."
 	}
 
@@ -614,6 +911,87 @@ func (m *modelImpl) renderDetail() string {
 	}
 
 	b.WriteString("\n")
+	return b.String()
+}
+
+func (m *modelImpl) renderRuleListView() string {
+	header := lipgloss.NewStyle().Padding(0, 2).Render(titleStyle.Render("Rules") + "  " + helpStyle.Render(fmt.Sprintf("%d rules", len(m.ruleList))))
+	content := lipgloss.JoinVertical(lipgloss.Left, header, m.viewport.View())
+	footer := helpStyle.Render("↑↓ navigate  ↵ explain  b back  q quit")
+	return lipgloss.JoinVertical(lipgloss.Left, content, "\n"+footer)
+}
+
+func (m *modelImpl) renderRuleList() string {
+	if len(m.ruleList) == 0 {
+		return helpStyle.Render("No rules available.")
+	}
+	var lines []string
+	for i, r := range m.ruleList {
+		cursor := "  "
+		if i == m.ruleCursor {
+			cursor = "> "
+		}
+		badge := severityBadge(r.Severity)
+		row := fmt.Sprintf("%s%s %s %s", cursor, badge, r.ID, r.Title)
+		row = lipgloss.NewStyle().MaxWidth(m.viewport.Width - 4).Render(row)
+		if i == m.ruleCursor {
+			row = lipgloss.NewStyle().
+				Background(lipgloss.Color("#333333")).
+				Render(row)
+		}
+		lines = append(lines, row)
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
+}
+
+func (m *modelImpl) renderRuleDetailView() string {
+	header := lipgloss.NewStyle().Padding(0, 2).Render(titleStyle.Render("Rule Detail"))
+	content := lipgloss.JoinVertical(lipgloss.Left, header, m.detailViewport.View())
+	footer := helpStyle.Render("↑↓ scroll  b back  q quit")
+	return lipgloss.JoinVertical(lipgloss.Left, content, "\n"+footer)
+}
+
+func (m *modelImpl) renderBaselineDone() string {
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("mavetis") + "  " + helpStyle.Render("baseline created"))
+	b.WriteString("\n\n")
+	if m.baselineDone && m.report != nil {
+		b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render("Baseline saved to: " + m.baselinePath))
+		b.WriteString("\n")
+		b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render(fmt.Sprintf("Findings captured: %d", len(m.report.Findings))))
+	} else {
+		b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render("Baseline creation failed."))
+	}
+	if m.reviewErr != nil {
+		b.WriteString("\n")
+		b.WriteString(errorStyle.Render("Error: " + m.reviewErr.Error()))
+	}
+	return b.String()
+}
+
+func (m *modelImpl) renderWizard() string {
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("mavetis") + "  " + helpStyle.Render("config wizard"))
+	b.WriteString("\n\n")
+	b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render("Detected project profile: " + m.wizardProject.Profile))
+	b.WriteString("\n")
+	b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render("Language: " + m.wizardProject.Language))
+	b.WriteString("\n\n")
+	b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render("Press Enter to generate .mavetis.yaml"))
+	return b.String()
+}
+
+func (m *modelImpl) renderWizardDone() string {
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("mavetis") + "  " + helpStyle.Render("config created"))
+	b.WriteString("\n\n")
+	b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render("Configuration saved to: " + m.wizardPath))
+	b.WriteString("\n")
+	b.WriteString(lipgloss.NewStyle().PaddingLeft(2).Render("Profile: " + m.wizardProject.Profile))
+	if m.reviewErr != nil {
+		b.WriteString("\n")
+		b.WriteString(errorStyle.Render("Error: " + m.reviewErr.Error()))
+	}
 	return b.String()
 }
 
