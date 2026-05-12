@@ -1,6 +1,9 @@
 package wizard
 
 import (
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -12,6 +15,32 @@ type ConfigTemplate struct {
 	Ignore     []string
 	Critical   []string
 	Restricted []string
+}
+
+func AppendGitignore(root string, entry string) error {
+	path := filepath.Join(root, ".gitignore")
+	existing := ""
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	} else {
+		existing = string(data)
+		if strings.Contains(existing, entry) {
+			return nil
+		}
+	}
+	var b strings.Builder
+	if existing != "" {
+		b.WriteString(existing)
+		if !strings.HasSuffix(existing, "\n") {
+			b.WriteString("\n")
+		}
+	}
+	b.WriteString(entry)
+	b.WriteString("\n")
+	return os.WriteFile(path, []byte(b.String()), 0644)
 }
 
 func Generate(template ConfigTemplate) string {
