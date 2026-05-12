@@ -579,7 +579,7 @@ func TestAboutQuitOnQ(t *testing.T) {
 func TestAboutViewContainsContent(t *testing.T) {
 	m := &modelImpl{state: stateAbout, ready: true, width: 80, height: 30}
 	view := m.View()
-	checks := []string{"mavetis", "0.2.1", "Commands", "review", "init", "secrets", "Links"}
+	checks := []string{"mavetis", "0.2.2", "Commands", "review", "init", "secrets", "Links"}
 	for _, check := range checks {
 		if !strings.Contains(view, check) {
 			t.Errorf("about view missing: %s", check)
