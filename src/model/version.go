@@ -1,5 +1,5 @@
 package model
 
 const Name = "mavetis"
-const Version = "0.2.2"
+const Version = "0.2.3"
 const Repository = "https://github.com/pimatis/mavetis"
