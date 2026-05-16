@@ -59,7 +59,7 @@ func TestWithChangedContextDiscoversLocalImports(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "src", "auth", "auth.go"), []byte("package auth\n"), 0o600); err != nil {
 		t.Fatalf("write auth: %v", err)
 	}
-	t.Chdir(root)
+	changeWorkingDir(t, root)
 	parsed := model.Diff{
 		Meta: model.DiffMeta{Mode: "staged"},
 		Files: []model.DiffFile{{

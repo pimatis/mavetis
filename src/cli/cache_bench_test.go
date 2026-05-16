@@ -12,7 +12,7 @@ import (
 
 func BenchmarkBuildFileReportNoCache(b *testing.B) {
 	root := benchmarkReviewRepo(b)
-	b.Chdir(root)
+	changeWorkingDir(b, root)
 	cfg := model.Config{Severity: "low", FailOn: "high", Output: "text"}
 	spec := model.Review{Files: []string{"src"}, NoCache: true}
 	rules := rule.Builtins(cfg)
@@ -26,7 +26,7 @@ func BenchmarkBuildFileReportNoCache(b *testing.B) {
 
 func BenchmarkBuildFileReportWarmCache(b *testing.B) {
 	root := benchmarkReviewRepo(b)
-	b.Chdir(root)
+	changeWorkingDir(b, root)
 	cfg := model.Config{Severity: "low", FailOn: "high", Output: "text"}
 	spec := model.Review{Files: []string{"src"}, CachePath: filepath.Join(root, "review-cache.json")}
 	rules := rule.Builtins(cfg)

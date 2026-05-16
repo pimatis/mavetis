@@ -17,7 +17,7 @@ func TestBuildFileReportWritesAndInvalidatesReviewCache(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "app.go"), []byte("package main\nconst token = \"ghp_0123456789abcdefghijklmnopqrstuvwxyzABCD\"\n"), 0o600); err != nil {
 		t.Fatalf("write app: %v", err)
 	}
-	t.Chdir(root)
+	changeWorkingDir(t, root)
 	cachePath := filepath.Join(root, "review-cache.json")
 	cfg := model.Config{Severity: "low", FailOn: "high", Output: "text"}
 	spec := model.Review{Files: []string{"app.go"}, CachePath: cachePath}
