@@ -64,6 +64,63 @@ func TestObserveRequestBodyDoesNotFlagRenderBodyVariable(t *testing.T) {
 	}
 }
 
+func TestLogInjectionDoesNotFlagDeterministicCliOutput(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "src/cli/run.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{{Kind: "added", Text: `fmt.Printf("%s %s\n", model.Name, model.Version)`, NewNumber: 1}},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "observe.log.injection" {
+			t.Fatalf("unexpected log injection finding: %#v", finding)
+		}
+	}
+}
+
+func TestBodySizeRuleDoesNotFlagOutputJSONHelper(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "src/output/json.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{{Kind: "added", Text: `func JSON(report model.Report) (string, error) {`, NewNumber: 1}},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "api.bodysize.missing" {
+			t.Fatalf("unexpected body size finding: %#v", finding)
+		}
+	}
+}
+
+func TestAuditRuleDoesNotFlagRemediationText(t *testing.T) {
+	diff := model.Diff{Files: []model.DiffFile{{
+		Path: "src/secret/pattern.go",
+		Hunks: []model.DiffHunk{{
+			Lines: []model.DiffLine{
+				{Kind: "added", Text: `remediation: "Revoke the token and remove it from source control."`, NewNumber: 1},
+				{Kind: "added", Text: `return fmt.Errorf("update requires an elevated shell for %s", target)`, NewNumber: 2},
+			},
+		}},
+	}}}
+	report, err := Review(diff, model.Config{Severity: "low"}, rule.Builtins(model.Config{}))
+	if err != nil {
+		t.Fatalf("review failed: %v", err)
+	}
+	for _, finding := range report.Findings {
+		if finding.RuleID == "observe.audit.missing" {
+			t.Fatalf("unexpected audit finding: %#v", finding)
+		}
+	}
+}
+
 func TestTemplateRuleDoesNotFlagGenericFlagParsing(t *testing.T) {
 	diff := model.Diff{Files: []model.DiffFile{{
 		Path: "src/cli/args.go",

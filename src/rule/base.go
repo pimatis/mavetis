@@ -24,6 +24,11 @@ func Builtins(config model.Config) []model.Rule {
 	rules = append(rules, logic()...)
 	rules = append(rules, websocket()...)
 	rules = append(rules, race()...)
+	rules = append(rules, graphql()...)
+	rules = append(rules, gospecific()...)
+	rules = append(rules, client()...)
+	rules = append(rules, file()...)
+	rules = append(rules, grpc()...)
 	return enrichControls(rules)
 }
 

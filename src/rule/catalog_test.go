@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/Pimatis/mavetis/src/model"
@@ -80,6 +81,32 @@ func TestBuiltinsExposeExpandedFamilies(t *testing.T) {
 	for _, id := range expected {
 		if !contains(rules, id) {
 			t.Fatalf("expected builtin rule %s", id)
+		}
+	}
+}
+
+func TestBuiltinsUseValidRegexPatterns(t *testing.T) {
+	rules := Builtins(model.Config{})
+	for _, item := range rules {
+		checkPatterns(t, item.ID, "require", item.Require)
+		checkPatterns(t, item.ID, "any", item.Any)
+		checkPatterns(t, item.ID, "near", item.Near)
+		checkPatterns(t, item.ID, "absent", item.Absent)
+		checkPatterns(t, item.ID, "imports", item.Imports)
+		checkPatterns(t, item.ID, "calls", item.Calls)
+		checkPatterns(t, item.ID, "middleware", item.Middleware)
+		checkPatterns(t, item.ID, "keys", item.Keys)
+		if item.ConstraintPattern != "" {
+			checkPatterns(t, item.ID, "constraint-pattern", []string{item.ConstraintPattern})
+		}
+	}
+}
+
+func checkPatterns(t *testing.T, ruleID string, field string, patterns []string) {
+	t.Helper()
+	for _, pattern := range patterns {
+		if _, err := regexp.Compile(pattern); err != nil {
+			t.Fatalf("compile %s pattern for %s: %v", field, ruleID, err)
 		}
 	}
 }

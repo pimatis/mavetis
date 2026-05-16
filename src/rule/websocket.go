@@ -74,5 +74,19 @@ func websocket() []model.Rule {
 			Absent:      []string{`(?i)(rate|Rate|throttle|Throttle|backoff|Backoff|limit|Limit|maxConn|MaxConn|max.*connect|quot|Quota)`},
 			Standards:   standard("OWASP-ASVS-V7.2", "OWASP-WebSocket"),
 		},
+		{
+			ID:          "websocket.ping.missing",
+			Title:       "WebSocket heartbeat missing",
+			Message:     "The diff introduces a WebSocket handler without ping/pong or keepalive.",
+			Remediation: "Implement periodic ping/pong or keepalive to detect and close stale connections.",
+			Category:    "websocket",
+			Severity:    "medium",
+			Confidence:  "medium",
+			Target:      "added",
+			Paths:       codeFiles(),
+			Require:     []string{`(?i)(ws\.Upgrade|websocket\.Upgrade|WebSocket\(|gorilla/websocket\.Upgrader|socket\.io\(|handleWebSocket|ws\.Handle\()`},
+			Absent:      []string{`(?i)(ping|pong|keepalive|keepAlive|heartbeat|HeartBeat)`},
+			Standards:   standard("OWASP-ASVS-V7.2", "OWASP-WebSocket"),
+		},
 	}
 }

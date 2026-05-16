@@ -72,5 +72,18 @@ func cloud() []model.Rule {
 			Require:     []string{`(?i)(0\.0\.0\.0/0|::/0|cidr_blocks\s*=\s*\[\s*["']0\.0\.0\.0/0["']).*(22|ssh)|(22|ssh).*(0\.0\.0\.0/0|::/0)`},
 			Standards:   standard("OWASP-ASVS-V14.4", "OWASP-Cloud"),
 		},
+		{
+			ID:          "cloud.db.public",
+			Title:       "Public database access introduced",
+			Message:     "The diff exposes a managed database to the public internet.",
+			Remediation: "Restrict database access to private subnets and approved bastion hosts.",
+			Category:    "cloud",
+			Severity:    "critical",
+			Confidence:  "high",
+			Target:      "added",
+			Paths:       codeAndConfigFiles(),
+			Require:     []string{`(?i)(publicly_accessible\s*=\s*true|0\.0\.0\.0/0).*(3306|5432|1433|27017|6379|11211)`},
+			Standards:   standard("OWASP-ASVS-V14.4", "OWASP-Cloud"),
+		},
 	}
 }
